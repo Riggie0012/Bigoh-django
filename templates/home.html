@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <!-- CSS Supporting Files-->
+     <link href = "../static/files/css/bootstrap.min.css"  rel = "stylesheet">
+     <link rel = "stylesheet" href="../static/files/css/lightslider.css">
+     <link rel = "stylesheet" href = "../static/files/css/style.css">
+
+     <!-- JavaScript Supporting Files-->
+      <script src = "../static/files/js/bootstrap.bundle.min.js"></script>
+      <script src = "../static/files/js/jquery.js"></script>
+      <script src = "../static/files/js/lightslider.js"></script>
+      <script src = "../static/files/js/script.js"></script>
+
+
+      <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+       integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
+       crossorigin="anonymous"
+       referrerpolicy="no-referrer"
+/>
+
+
+</head>
+<body>
+    <div class="container-fluid">
+        {% include 'navbar.html' %}
+        <br>
+        
+        {% include 'carousel.html' %}
+    </div>
+
+     <br>
+
+     {% if q is defined %}
+  <h2>Search results for "{{ q }}"</h2>
+
+  {% if results and results|length > 0 %}
+    <div class="row">
+      {% for item in results %}
+        <div class="col-md-3 mb-3">
+          <div class="card">
+            <img src="{{ image_url(item[7]) }}" class="card-img-top" alt="">
+            <div class="card-body">
+              <h6 class="card-title">{{ item[1] }}</h6>
+              <p class="text-danger mb-1">KES {{ item[4] }}</p>
+              {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+              {% if rating and rating.count > 0 %}
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-warning">
+                  {% for i in range(1, 6) %}
+                    {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                  {% endfor %}
+                </span>
+                <span class="text-muted small">{{ rating.avg }}/5</span>
+                <span class="text-muted small">({{ rating.count }})</span>
+                {% if rating.is_sample %}
+                  <span class="badge bg-secondary ms-1">Sample</span>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="text-muted small mb-2">No reviews yet.</div>
+              {% endif %}
+              {% if item[5] is not none and item[5]|int <= 5 %}
+              <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+              {% endif %}
+              <div class="d-flex gap-2">
+                <a href="/single_item/{{ item[0] }}" class="btn btn-sm btn-primary">View</a>
+                <form method="POST" action="/add_to_cart/{{ item[0] }}">
+                  <input type="hidden" name="qty" value="1">
+                  <button class="btn btn-sm btn-success" type="submit">Add to Cart</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No products found.</p>
+  {% endif %}
+ {% endif %}
+
+
+     <br>
+     <div class="section-head section-head--yellow">
+       <h1 id="new-products">New Products</h1>
+       <a class="section-head__link" href="/categories">See All <i class="fa-solid fa-angle-right"></i></a>
+     </div>
+     {% if new_products is defined and new_products|length > 0 %}
+     <section class="slider p-4">
+       <ul class="autoWidth">
+         {% for item in new_products %}
+           <li>
+             <div class="box">
+               <div class="slide-img">
+                 <img src="{{ image_url(item[7]) }}" width="50" height="50">
+                 <div class="overlay">
+                   <a href="/single_item/{{ item[0]}}" class="buy-btn">Buy Now</a>
+                 </div>
+               </div>
+                <div class="detail-box">
+                  {{item[1]}}<br>
+                  <b class="text-danger">KES {{item[4]}}</b><br>
+                  {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+                  {% if rating and rating.count > 0 %}
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-warning">
+                      {% for i in range(1, 6) %}
+                        {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                      {% endfor %}
+                    </span>
+                    <span class="text-muted small">{{ rating.avg }}/5</span>
+                    <span class="text-muted small">({{ rating.count }})</span>
+                    {% if rating.is_sample %}
+                      <span class="badge bg-secondary ms-1">Sample</span>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="text-muted small mb-2">No reviews yet.</div>
+                  {% endif %}
+                  {% if item[5] is not none and item[5]|int <= 5 %}
+                  <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+                  {% endif %}
+                 <form method="POST" action="/add_to_cart/{{ item[0] }}">
+                   <input type="hidden" name="qty" value="1">
+                   <button class="btn btn-sm btn-success">Add to Cart</button>
+                 </form>
+               </div>
+             </div>
+           </li>
+         {% endfor %}
+       </ul>
+     </section>
+     {% else %}
+       <p class="text-muted">No new products yet.</p>
+     {% endif %}
+
+    <br>
+    <section class="flash-sale-wrap" id="flash-sales">
+      {% set flash_active = flash_sale_active if flash_sale_active is defined else false %}
+      {% set flash_seconds = flash_sale_seconds if flash_sale_seconds is defined else 0 %}
+      {% set flash_label = flash_sale_time_label if flash_sale_time_label is defined else "00h : 00m : 00s" %}
+      <div class="flash-sale-head">
+        <div class="flash-sale-title">
+          <i class="fa-solid fa-bolt"></i>
+          Flash Sales <span>| {{ "Live Now" if flash_active else "Paused" }}</span>
+        </div>
+        <div class="flash-sale-timer" data-countdown="{{ flash_seconds }}">
+          Time Left: <span>{{ flash_label }}</span>
+        </div>
+        <a class="flash-sale-link" href="/flash-sales">See All <i class="fa-solid fa-angle-right"></i></a>
+       </div>
+       <div class="flash-sale-body">
+         {% set flash_items = flash_sales if flash_sales is defined else [] %}
+         {% if flash_items is defined and flash_items|length > 0 %}
+           <ul class="flash-sale-list">
+             {% for item in flash_items[:6] %}
+               {% set price = item[4]|float %}
+               {% set discount = ((item[0]|int * 7) % 35) + 10 %}
+               {% set old_price = price / (1 - (discount / 100)) %}
+               {% set remaining = item[5]|int if item[5] is not none else ((item[0]|int * 13) % 50 + 5) %}
+               {% set bar_pct = 10 if remaining < 10 else (remaining if remaining < 100 else 100) %}
+               <li class="flash-sale-card">
+                 <a href="/single_item/{{ item[0]}}" class="flash-sale-image">
+                   <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
+                   <span class="flash-sale-badge">-{{ discount }}%</span>
+                 </a>
+                 <div class="flash-sale-name">{{ item[1] }}</div>
+                 <div class="flash-sale-price">KSh {{ price|round(0, 'ceil') }}</div>
+                <div class="flash-sale-old">KSh {{ old_price|round(0, 'ceil') }}</div>
+                {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+                {% if rating and rating.count > 0 %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="text-warning">
+                    {% for i in range(1, 6) %}
+                      {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                    {% endfor %}
+                  </span>
+                  <span class="text-muted small">{{ rating.avg }}/5</span>
+                  <span class="text-muted small">({{ rating.count }})</span>
+                  {% if rating.is_sample %}
+                    <span class="badge bg-secondary ms-1">Sample</span>
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted small mb-1">No reviews yet.</div>
+                {% endif %}
+                <div class="flash-sale-stock">{{ remaining }} items left</div>
+                 <div class="flash-sale-bar">
+                   <span style="width: {{ bar_pct }}%;"></span>
+                 </div>
+               </li>
+             {% endfor %}
+           </ul>
+         {% else %}
+           <p class="text-muted mb-0">No flash sales right now.</p>
+         {% endif %}
+       </div>
+     </section>
+
+     <br>
+     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+       <h1 class="mb-0">Men Watches</h1>
+       <a class="text-decoration-none fw-semibold" href="/category/men-watch">See All <i class="fa-solid fa-angle-right"></i></a>
+     </div>
+  <section class="slider p-4">
+ <ul  class="autoWidth">
+ 
+  {% for item in watches %}
+    <li>
+      <div class="box">
+          <div class="slide-img">
+          <img src="{{ image_url(item[7]) }}" width="50" height="50">
+          <div class="overlay">
+              <a href="/single_item/{{ item[0]}}" class="buy-btn">Buy Now</a>
+              
+          </div>
+          </div>
+          <div class="detail-box">
+              {{item[1]}}<br>
+              <b class="text-danger">KES {{item[4]}}</b><br>
+              {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+              {% if rating and rating.count > 0 %}
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-warning">
+                  {% for i in range(1, 6) %}
+                    {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                  {% endfor %}
+                </span>
+                <span class="text-muted small">{{ rating.avg }}/5</span>
+                <span class="text-muted small">({{ rating.count }})</span>
+                {% if rating.is_sample %}
+                  <span class="badge bg-secondary ms-1">Sample</span>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="text-muted small mb-2">No reviews yet.</div>
+              {% endif %}
+              {% if item[5] is not none and item[5]|int <= 5 %}
+              <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+              {% endif %}
+            <form method="POST" action="/add_to_cart/{{ item[0] }}">
+              <input type="hidden" name="qty" value="1">
+              <button class="btn btn-sm btn-success">Add to Cart</button>
+            </form>
+
+          </div>
+          </div>
+      </li>
+     {% endfor %}
+    </ul>
+</section>
+
+ <br>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h1 class="mb-0">Ladies Watches</h1>
+      <a class="text-decoration-none fw-semibold" href="/category/ladies-watch">See All <i class="fa-solid fa-angle-right"></i></a>
+    </div>
+  <section class="slider p-4">
+ <ul  class="autoWidth">
+ 
+  {% for item in ladies %}
+    <li>
+      <div class="box">
+          <div class="slide-img">
+            <img src="{{ image_url(item[7]) }}" width="50" height="50">
+          <div class="overlay">
+              <a href="/single_item/{{ item[0]}}" class="buy-btn">Buy Now</a>
+          </div>
+          </div>
+          <div class="detail-box">
+              {{item[1]}}
+              <br>
+              <b class="text-danger">KES {{item[4]}}</b><br>
+              {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+              {% if rating and rating.count > 0 %}
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-warning">
+                  {% for i in range(1, 6) %}
+                    {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                  {% endfor %}
+                </span>
+                <span class="text-muted small">{{ rating.avg }}/5</span>
+                <span class="text-muted small">({{ rating.count }})</span>
+                {% if rating.is_sample %}
+                  <span class="badge bg-secondary ms-1">Sample</span>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="text-muted small mb-2">No reviews yet.</div>
+              {% endif %}
+              {% if item[5] is not none and item[5]|int <= 5 %}
+              <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+              {% endif %}
+            <form method="POST" action="/add_to_cart/{{ item[0] }}">
+              <input type="hidden" name="qty" value="1">
+              <button class="btn btn-sm btn-success">Add to Cart</button>
+            </form>
+
+          </div>
+          </div>
+      </li>
+     {% endfor %}
+    </ul>
+</section>
+
+    <br>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h1 class="mb-0">Jerseys</h1>
+          <a class="text-decoration-none fw-semibold" href="/category/jersey">See All <i class="fa-solid fa-angle-right"></i></a>
+        </div>
+    <section class="slider p-4">
+    <ul  class="autoWidth">
+    
+    {% for item in jersey %}
+        <li>
+        <div class="box">
+            <div class="slide-img">
+            <img src="{{ image_url(item[7]) }}" width="50" height="50">
+            <div class="overlay">
+                <a href="/single_item/{{ item[0]}}" class="buy-btn">Buy Now</a>
+            </div>
+            </div>
+            <div class="detail-box">
+                {{item[1]}}
+                <br>
+                <b class="text-danger">KES {{item[4]}}</b><br>
+                {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+                {% if rating and rating.count > 0 %}
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span class="text-warning">
+                    {% for i in range(1, 6) %}
+                      {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                    {% endfor %}
+                  </span>
+                  <span class="text-muted small">{{ rating.avg }}/5</span>
+                  <span class="text-muted small">({{ rating.count }})</span>
+                  {% if rating.is_sample %}
+                    <span class="badge bg-secondary ms-1">Sample</span>
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted small mb-2">No reviews yet.</div>
+                {% endif %}
+                {% if item[5] is not none and item[5]|int <= 5 %}
+                <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+                {% endif %}
+            <form method="POST" action="/add_to_cart/{{ item[0] }}">
+               <input type="hidden" name="qty" value="1">
+               <button class="btn btn-sm btn-success">Add to Cart</button>
+            </form>
+
+                </div>
+                </div>
+         </li>
+     {% endfor %}
+    </ul>
+</section>
+
+    <br>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h1 class="mb-0">Foam Cleaner</h1>
+          <a class="text-decoration-none fw-semibold" href="/category/cleaning">See All <i class="fa-solid fa-angle-right"></i></a>
+        </div>
+    <section class="slider p-4">
+    <ul  class="autoWidth">
+    
+    {% for item in foam %}
+        <li>
+        <div class="box">
+            <div class="slide-img">
+            <img src="{{ image_url(item[7]) }}" width="50" height="50">
+            <div class="overlay">
+                <a href="/single_item/{{ item[0]}}" class="buy-btn">Buy Now</a>
+            </div>
+            </div>
+            <div class="detail-box">
+               <p> {{item[1]}} </p>
+               <p> <b class="text-danger">KES {{item[4]}}</b> </p>
+               {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+               {% if rating and rating.count > 0 %}
+               <div class="d-flex align-items-center gap-2 mb-2">
+                 <span class="text-warning">
+                   {% for i in range(1, 6) %}
+                     {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                   {% endfor %}
+                 </span>
+                 <span class="text-muted small">{{ rating.avg }}/5</span>
+                 <span class="text-muted small">({{ rating.count }})</span>
+                 {% if rating.is_sample %}
+                   <span class="badge bg-secondary ms-1">Sample</span>
+                 {% endif %}
+               </div>
+               {% else %}
+               <div class="text-muted small mb-2">No reviews yet.</div>
+               {% endif %}
+               {% if item[5] is not none and item[5]|int <= 5 %}
+               <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+               {% endif %}
+            <form method="POST" action="/add_to_cart/{{ item[0] }}">
+              <input type="hidden" name="qty" value="1">
+              <button class="btn btn-sm btn-success">Add to Cart</button>
+            </form>
+
+                </div>
+                </div>
+         </li>
+     {% endfor %}
+    </ul>
+    </section>
+
+    <br>
+
+    {% include 'footer.html' %} 
+    
+</body>
+</html>

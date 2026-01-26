@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flash Sale | ZenithCart Admin</title>
+  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0f12;
+      --panel: #15171c;
+      --panel-2: #1c1f26;
+      --border: #232733;
+      --text: #f4f4f5;
+      --muted: #98a2b3;
+      --orange: #ff8a00;
+    }
+
+    body {
+      font-family: "Space Grotesk", sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, #1b1f2a 0%, #0e0f12 45%, #0b0c10 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: #0c0d11;
+      border-right: 1px solid var(--border);
+      padding: 28px 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.4px;
+      margin-bottom: 24px;
+    }
+
+    .brand span {
+      color: var(--orange);
+    }
+
+    .nav-section {
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 10px;
+      margin-top: 8px;
+      background: transparent;
+    }
+
+    .nav-links a.active,
+    .nav-links a:hover {
+      background: var(--panel-2);
+    }
+
+    .content {
+      padding: 28px 28px 40px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .flash-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .flash-controls label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .flash-controls input {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .flash-toggle {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .flash-actions {
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .flash-products {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .flash-product {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #12141a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .flash-product img {
+      width: 46px;
+      height: 46px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #2a2f3a;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">Zenith<span>Cart</span> Admin</div>
+      <div class="nav-links">
+        <a href="/admin">Dashboard</a>
+        <a class="active" href="/admin/flash-sale">Flash Sale</a>
+        <a href="/admin/products">Products</a>
+        <a href="/admin/orders">Orders</a>
+        <a href="/upload">Upload Products</a>
+        <a href="/">Storefront</a>
+        <a href="/logout">Logout</a>
+      </div>
+
+      <div class="nav-section">Quick Actions</div>
+      <div class="nav-links">
+        <a href="/cart">View Cart</a>
+        <a href="/search">Search Products</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h3 class="mb-1">Flash Sale Control</h3>
+          <div class="text-muted">Activate and schedule flash sales with selected products.</div>
+        </div>
+        <div class="pill">{{ "Active" if flash_sale_active else "Inactive" }}</div>
+      </div>
+
+      <section class="panel">
+        <div class="text-muted small mb-2">Current countdown: {{ flash_sale_time_label }}</div>
+        <form method="POST" action="/admin/flash-sale">
+          <div class="flash-controls">
+            <label class="flash-toggle">
+              <input type="checkbox" name="is_active" {% if flash_sale_active %}checked{% endif %}>
+              Activate Flash Sale
+            </label>
+            <label>
+              Runtime hours
+              <input type="number" min="0" name="duration_hours" value="{{ flash_duration_hours }}">
+            </label>
+            <label>
+              Runtime minutes
+              <input type="number" min="0" max="59" name="duration_minutes" value="{{ flash_duration_minutes }}">
+            </label>
+            <div class="flash-actions">
+              <button class="btn btn-sm btn-primary" type="submit">Save Flash Sale</button>
+            </div>
+          </div>
+
+          <div class="flash-products">
+            {% for p in flash_products %}
+              <label class="flash-product">
+                <input type="checkbox" name="flash_products" value="{{ p[0] }}" {% if p[0] in flash_selected_ids %}checked{% endif %}>
+                <img src="{{ image_url(p[5]) }}" alt="">
+                <div>
+                  <div>{{ p[1] }}</div>
+                  <div class="text-muted small">KES {{ "{:,.2f}".format(p[3] or 0) }} • Stock {{ p[4] }}</div>
+                </div>
+              </label>
+            {% endfor %}
+            {% if flash_products|length == 0 %}
+              <div class="text-muted">No products available.</div>
+            {% endif %}
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

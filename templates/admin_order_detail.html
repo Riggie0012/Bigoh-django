@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order #{{ order[0] }} | ZenithCart Admin</title>
+  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0f12;
+      --panel: #15171c;
+      --panel-2: #1c1f26;
+      --border: #232733;
+      --text: #f4f4f5;
+      --muted: #98a2b3;
+      --orange: #ff8a00;
+      --green: #3ddc97;
+      --blue: #4f8cff;
+      --yellow: #f4b740;
+      --red: #f87171;
+    }
+
+    body {
+      font-family: "Space Grotesk", sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, #1b1f2a 0%, #0e0f12 45%, #0b0c10 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: #0c0d11;
+      border-right: 1px solid var(--border);
+      padding: 28px 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.4px;
+      margin-bottom: 24px;
+    }
+
+    .brand span {
+      color: var(--orange);
+    }
+
+    .nav-section {
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 10px;
+      margin-top: 8px;
+      background: transparent;
+    }
+
+    .nav-links a.active,
+    .nav-links a:hover {
+      background: var(--panel-2);
+    }
+
+    .content {
+      padding: 28px 28px 40px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .table-dark {
+      --bs-table-bg: transparent;
+      --bs-table-striped-bg: #12141a;
+      --bs-table-striped-color: var(--text);
+      border-color: var(--border);
+    }
+
+    .table-dark th,
+    .table-dark td {
+      border-color: var(--border);
+    }
+
+    .mono {
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">Zenith<span>Cart</span> Admin</div>
+      <div class="nav-links">
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/flash-sale">Flash Sale</a>
+        <a href="/admin/products">Products</a>
+        <a class="active" href="/admin/orders">Orders</a>
+        <a href="/upload">Upload Products</a>
+        <a href="/">Storefront</a>
+        <a href="/logout">Logout</a>
+      </div>
+
+      <div class="nav-section">Quick Actions</div>
+      <div class="nav-links">
+        <a href="/cart">View Cart</a>
+        <a href="/search">Search Products</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h3 class="mb-1">Order #{{ order[0] }}</h3>
+          <div class="text-muted">Review customer, delivery, and line items.</div>
+        </div>
+        <a href="/admin/orders" class="btn btn-sm btn-outline-light">Back to Orders</a>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <div class="panel h-100">
+            <h6 class="text-uppercase text-muted">Customer</h6>
+            {% if has_reference %}
+              <div>{{ order[6] or "Customer" }}</div>
+              <div class="text-muted">{{ order[7] or "-" }}</div>
+              <div class="text-muted">{{ order[8] or "-" }}</div>
+            {% else %}
+              <div>{{ order[5] or "Customer" }}</div>
+              <div class="text-muted">{{ order[6] or "-" }}</div>
+              <div class="text-muted">{{ order[7] or "-" }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="panel h-100">
+            <h6 class="text-uppercase text-muted">Delivery</h6>
+            <div>{{ order[1] }}</div>
+            <div class="text-muted">Payment: {{ order[2] }}</div>
+            <div class="text-muted">Status: {{ order[3] }}</div>
+            <div class="text-muted">Reference: {{ reference }}</div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="panel h-100">
+            <h6 class="text-uppercase text-muted">Summary</h6>
+            <div class="text-danger mono">KES {{ "{:,.2f}".format(order[4] or 0) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel mt-3">
+        <h5 class="mb-3">Items</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-striped align-middle">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Unit Price</th>
+                <th>Qty</th>
+                <th>Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in items %}
+              <tr>
+                <td>{{ it[0] }}</td>
+                <td class="mono">KES {{ "{:,.2f}".format(it[1] or 0) }}</td>
+                <td class="mono">{{ it[2] }}</td>
+                <td class="text-danger mono">KES {{ "{:,.2f}".format(it[3] or 0) }}</td>
+              </tr>
+              {% endfor %}
+              {% if items|length == 0 %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No order items found.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

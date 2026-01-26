@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flash Sales</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../static/files/css/style.css">
+  <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+  <script src="../static/files/js/script.js"></script>
+</head>
+<body>
+  <div class="container-fluid">
+    {% include 'navbar.html' %}
+  </div>
+
+  <div class="container py-3">
+    <section class="flash-sale-wrap mt-4">
+      <div class="flash-sale-head">
+        <div class="flash-sale-title">
+          <i class="fa-solid fa-bolt"></i>
+          Flash Sales <span>| {{ "Live Now" if flash_sale_active else "Paused" }}</span>
+        </div>
+        <div class="flash-sale-timer" data-countdown="{{ flash_sale_seconds }}">
+          Time Left: <span>{{ flash_sale_time_label }}</span>
+        </div>
+        <a class="flash-sale-link" href="/#flash-sales">Back to Home</a>
+      </div>
+      <div class="flash-sale-body">
+        {% if flash_sales and flash_sales|length > 0 %}
+          <ul class="flash-sale-list">
+            {% for item in flash_sales %}
+              {% set price = item[4]|float %}
+              {% set discount = ((item[0]|int * 7) % 35) + 10 %}
+              {% set old_price = price / (1 - (discount / 100)) %}
+              {% set remaining = item[5]|int if item[5] is not none else ((item[0]|int * 13) % 50 + 5) %}
+              {% set bar_pct = 10 if remaining < 10 else (remaining if remaining < 100 else 100) %}
+              <li class="flash-sale-card">
+                <a href="/single_item/{{ item[0]}}" class="flash-sale-image">
+                  <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
+                  <span class="flash-sale-badge">-{{ discount }}%</span>
+                </a>
+                <div class="flash-sale-name">{{ item[1] }}</div>
+                <div class="flash-sale-price">KSh {{ price|round(0, 'ceil') }}</div>
+                <div class="flash-sale-old">KSh {{ old_price|round(0, 'ceil') }}</div>
+                {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+                {% if rating and rating.count > 0 %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="text-warning">
+                    {% for i in range(1, 6) %}
+                      {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                    {% endfor %}
+                  </span>
+                  <span class="text-muted small">{{ rating.avg }}/5</span>
+                  <span class="text-muted small">({{ rating.count }})</span>
+                  {% if rating.is_sample %}
+                    <span class="badge bg-secondary ms-1">Sample</span>
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted small mb-1">No reviews yet.</div>
+                {% endif %}
+                <div class="flash-sale-stock">{{ remaining }} items left</div>
+                <div class="flash-sale-bar">
+                  <span style="width: {{ bar_pct }}%;"></span>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">No flash sale items available right now.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <div class="mt-4">
+      {% include 'footer.html' %}
+    </div>
+  </div>
+</body>
+</html>

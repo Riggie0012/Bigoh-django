@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+ENV/
+.env
+.env.*
+
+# Logs/DB
+pip-log.txt
+*.log
+instance/
+*.sqlite3
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets
+client_secret*.json
+client secret.json
+
+# Vercel
+.vercel/
+
+# Local artifacts
+patch.diff

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>About | ZenithCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+  <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+    body {
+      font-family: "Space Grotesk", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .about-hero {
+      background: radial-gradient(800px 400px at 10% 20%, rgba(255, 122, 0, 0.18), transparent 60%),
+                  radial-gradient(600px 300px at 90% 10%, rgba(34, 197, 94, 0.15), transparent 55%),
+                  linear-gradient(135deg, #0f172a 0%, #0b1220 55%, #0a0f1a 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .about-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .about-hero__content {
+      position: relative;
+      z-index: 2;
+      max-width: 700px;
+    }
+
+    .about-hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      padding: 16px;
+      color: #fff;
+      backdrop-filter: blur(6px);
+    }
+
+    .stat-card h4 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .stat-card span {
+      color: #cbd5f5;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .info-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      height: 100%;
+    }
+
+    .info-card h5 {
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .info-card p {
+      margin-bottom: 8px;
+    }
+
+    .promise {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 18px;
+      padding: 22px;
+      margin-top: 24px;
+    }
+
+    .promise ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    .promise li {
+      margin-bottom: 6px;
+    }
+
+    .map-frame {
+      border-radius: 14px;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    {% include 'navbar.html' %}
+
+    <section class="about-hero mt-4">
+      <div class="about-hero__content">
+        <div class="about-hero__badge"><i class="fa-solid fa-star"></i> Trusted Store</div>
+        <h2 class="mb-3">About ZenithCart</h2>
+        <p class="mb-0">
+          ZenithCart delivers quality watches, sports jerseys, and lifestyle essentials
+          with reliable service and fair pricing. We focus on trust, speed, and authentic products.
+        </p>
+
+        <div class="stat-row">
+          <div class="stat-card">
+            <h4>Fast Delivery</h4>
+            <span>On-time dispatch</span>
+          </div>
+          <div class="stat-card">
+            <h4>Quality Checked</h4>
+            <span>Verified products</span>
+          </div>
+          <div class="stat-card">
+            <h4>Support Ready</h4>
+            <span>Real humans</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-grid">
+      <div class="info-card">
+        <h5>Our Mission</h5>
+        <p>Deliver premium products with fast, dependable service at fair prices.</p>
+      </div>
+      <div class="info-card">
+        <h5>Our Promise</h5>
+        <p>Every order is packed with care and supported by responsive customer service.</p>
+      </div>
+      <div class="info-card">
+        <h5>Why Customers Choose Us</h5>
+        <p>Curated collections, transparent pricing, and verified authenticity.</p>
+      </div>
+    </section>
+
+    <section class="row g-3 mt-3">
+      <div class="col-md-6">
+        <div class="info-card">
+          <h5>Contact & Support</h5>
+          <p><i class="fa-solid fa-envelope"></i> IT Support:
+            <a href="mailto:riggie0012@gmail.com">riggie0012@gmail.com</a>
+          </p>
+          <p><i class="fa-solid fa-user-shield"></i> Admin Support:
+            <a href="mailto:junioronunga8@gmail.com">junioronunga8@gmail.com</a>
+          </p>
+          <p><i class="fa-solid fa-phone"></i> Call / SMS:
+            <a href="tel:0759808915">0759 808 915</a>
+          </p>
+          <p><i class="fa-brands fa-whatsapp"></i> WhatsApp:
+            <a href="https://wa.me/254759808915" target="_blank">Chat on WhatsApp</a>
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="info-card">
+          <h5>Location</h5>
+          <p>Visit us at Donholm Caltex, Nairobi.</p>
+          <iframe
+            class="map-frame"
+            src="https://www.google.com/maps?q=Donholm%20Caltex&output=embed"
+            width="100%"
+            height="180"
+            allowfullscreen=""
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="promise">
+      <h5 class="mb-2">Our Store Promise</h5>
+      <ul>
+        <li>Clear pricing and transparent order updates.</li>
+        <li>Secure checkout and dependable delivery options.</li>
+        <li>Friendly support whenever you need help.</li>
+      </ul>
+    </section>
+
+    <div class="mt-4">
+      {% include 'footer.html' %}
+    </div>
+  </div>
+</body>
+</html>

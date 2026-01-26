@@ -1,0 +1,195 @@
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+  .zen-footer {
+    font-family: "Space Grotesk", sans-serif;
+    color: #e5e7eb;
+    background: radial-gradient(1200px 500px at 10% 0%, rgba(255, 122, 0, 0.15), transparent 60%),
+                radial-gradient(900px 400px at 90% 10%, rgba(34, 197, 94, 0.12), transparent 55%),
+                linear-gradient(135deg, #0f172a 0%, #0b1220 60%, #0a0f1a 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 48px 0 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .zen-footer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .zen-footer__inner {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .zen-footer__top {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .zen-footer__brand {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .zen-footer__brand span {
+    color: #ff7a00;
+  }
+
+  .zen-footer__tagline {
+    color: #cbd5f5;
+    max-width: 520px;
+  }
+
+  .zen-footer__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .zen-footer__card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 18px;
+    backdrop-filter: blur(8px);
+  }
+
+  .zen-footer__title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+
+  .zen-footer__link {
+    display: block;
+    color: #e5e7eb;
+    text-decoration: none;
+    margin: 6px 0;
+  }
+
+  .zen-footer__link:hover {
+    color: #ff7a00;
+  }
+
+  .zen-footer__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 122, 0, 0.12);
+    color: #ffb26b;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .zen-footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 16px;
+    color: #94a3b8;
+    font-size: 13px;
+  }
+
+  .zen-footer__payments {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .zen-footer__badge {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .zen-footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<footer class="zen-footer">
+  <div class="zen-footer__inner">
+    <div class="zen-footer__top">
+      <div class="zen-footer__brand">Zenith <span>Cart</span></div>
+      <div class="zen-footer__tagline">
+        Your trusted online store for quality watches, sports jerseys, and lifestyle essentials.
+        We deliver authentic products with fair pricing and dependable service.
+      </div>
+    </div>
+
+    <div class="zen-footer__grid">
+      <div class="zen-footer__card">
+        <div class="zen-footer__title">About</div>
+        <div>Curated collections, transparent pricing, and on-time delivery across Kenya.</div>
+        <div class="zen-footer__pill">Since 2026</div>
+      </div>
+
+      <div class="zen-footer__card">
+        <div class="zen-footer__title">Support</div>
+        <a class="zen-footer__link" href="mailto:riggie0012@gmail.com">IT Support: riggie0012@gmail.com</a>
+        <a class="zen-footer__link" href="mailto:junioronunga8@gmail.com">Admin Support: junioronunga8@gmail.com</a>
+        <a class="zen-footer__link" href="tel:0759808915">Call / SMS: 0759 808 915</a>
+        <a class="zen-footer__link" href="https://wa.me/254759808915" target="_blank">WhatsApp Chat</a>
+      </div>
+
+      <div class="zen-footer__card">
+        <div class="zen-footer__title">Visit Us</div>
+        <div>Donholm Caltex, Nairobi</div>
+        <div class="mt-3">
+          <iframe
+            src="https://www.google.com/maps?q=Donholm%20Caltex&output=embed"
+            width="100%"
+            height="160"
+            style="border:0; border-radius:12px;"
+            allowfullscreen=""
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+
+      <div class="zen-footer__card">
+        <div class="zen-footer__title">Store Promise</div>
+        <div>Quality checked products, responsive support, and smooth checkout.</div>
+        <div class="zen-footer__payments mt-3">
+          <span class="zen-footer__badge">M-Pesa</span>
+          <span class="zen-footer__badge">Card</span>
+          <span class="zen-footer__badge">Pay on Delivery</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="zen-footer__bottom">
+      <div>Developed by riggie0012@gmail.com (c) 2026. All Rights Reserved.</div>
+      <div class="zen-footer__payments">
+        <span>Secure checkout</span>
+        <span class="zen-footer__badge">SSL</span>
+        <span class="zen-footer__badge">Verified</span>
+      </div>
+    </div>
+  </div>
+</footer>

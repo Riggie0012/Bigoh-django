@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <style>
+      :root {
+        --zen-dark: #0f172a;
+        --zen-darker: #0b1220;
+        --zen-accent: #ff7a00;
+        --zen-accent-2: #22c55e;
+        --zen-text: #0f172a;
+        --zen-muted: #6b7280;
+        --zen-border: #e5e7eb;
+        --zen-surface: #ffffff;
+      }
+
+      body { font-family: "Sora", sans-serif; }
+
+      .zen-topbar {
+        background: linear-gradient(90deg, #0f172a 0%, #0b1220 60%, #111827 100%);
+        color: #e5e7eb;
+        font-size: 10px;
+        padding: 2px 0;
+      }
+      .zen-topbar a {
+        color: #ffb26b;
+        text-decoration: none;
+        margin-left: 10px;
+      }
+
+      .zen-nav {
+        background: rgba(255, 255, 255, 0.92);
+        border-bottom: 1px solid var(--zen-border);
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 1500;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      }
+
+      .zen-brand-block .navbar-brand {
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .zen-brand-block .navbar-brand span { color: var(--zen-accent); }
+
+      .zen-links .nav-link {
+        color: var(--zen-text);
+        font-weight: 600;
+        margin-right: 8px;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .zen-links .nav-link::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -6px;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--zen-accent), #ffb26b);
+        transition: width 0.25s ease;
+      }
+      .zen-links .nav-link:hover {
+        color: var(--zen-accent);
+      }
+      .zen-links .nav-link:hover::after {
+        width: 100%;
+      }
+
+      .zen-search { position: relative; flex: 1; }
+      .zen-search input {
+        border-radius: 999px;
+        padding: 6px 36px 6px 12px;
+        border: 1px solid var(--zen-border);
+        width: 100%;
+      }
+      .zen-search button {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        border-radius: 999px;
+        padding: 3px 10px;
+        background: var(--zen-accent);
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .search-suggestions {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid var(--zen-border);
+        border-radius: 16px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+        z-index: 2200;
+        display: none;
+        overflow: hidden;
+      }
+      .search-suggestions.show { display: block; }
+      .suggestion-item {
+        display: flex;
+        gap: 12px;
+        padding: 10px 14px;
+        text-decoration: none;
+        color: var(--zen-text);
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .suggestion-item:last-child { border-bottom: none; }
+      .suggestion-item:hover { background: #f8fafc; }
+      .suggestion-item.active {
+        background: #fff7ed;
+        border-left: 3px solid var(--zen-accent);
+      }
+      .suggestion-item img {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+      }
+      .suggestion-title { font-weight: 600; }
+      .suggestion-meta { font-size: 12px; color: var(--zen-muted); }
+      .suggestion-desc { font-size: 12px; color: #475569; }
+
+      .zen-trending {
+        font-size: 11px;
+        color: var(--zen-muted);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 2px;
+      }
+      .zen-chip {
+        background: #fff7ed;
+        color: #c2410c;
+        border: 1px solid #fed7aa;
+        padding: 4px 10px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .zen-actions { display: flex; align-items: center; gap: 14px; }
+      .zen-cart {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        color: var(--zen-text);
+        font-weight: 600;
+        position: relative;
+      }
+      .zen-cart-icon { width: 16px; height: 16px; }
+      .zen-user { font-size: 11px; color: var(--zen-muted); }
+      .zen-link { color: var(--zen-text); text-decoration: none; font-weight: 600; }
+      .zen-link:hover { color: var(--zen-accent); }
+      .zen-user {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .cat-trigger {
+        background: #e53935;
+        color: #fff !important;
+        border-radius: 8px;
+        padding: 3px 9px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+      }
+      .cat-trigger:hover,
+      .cat-trigger:focus {
+        background: #cc2f2b;
+        color: #fff !important;
+      }
+      .category-mega {
+        width: 920px;
+        padding: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+        position: absolute;
+        z-index: 2000;
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      .dropdown-menu.show.category-mega {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      .category-mega .mega-wrap { display: flex; }
+      .category-sidebar {
+        background: #e53935;
+        color: #fff;
+        min-width: 260px;
+      }
+      .category-sidebar .title {
+        font-weight: 700;
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .category-sidebar a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        color: #fff;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        font-weight: 600;
+      }
+      .category-sidebar a:hover { background: rgba(255, 255, 255, 0.12); }
+      .category-main {
+        background: #fff;
+        padding: 16px;
+        flex: 1;
+      }
+      .category-tabs {
+        display: flex;
+        gap: 24px;
+        font-weight: 700;
+        border-bottom: 1px solid #eef2f7;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+      }
+      .category-tabs a {
+        color: #111827;
+        text-decoration: none;
+      }
+      .category-tabs a:hover {
+        color: #e53935;
+      }
+      .category-tabs .active {
+        color: #e53935;
+        border-bottom: 2px solid #e53935;
+        padding-bottom: 6px;
+      }
+      .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 14px;
+      }
+      .category-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: #111827;
+        border: 1px solid #eef2f7;
+        border-radius: 10px;
+        padding: 12px;
+        background: #fff;
+      }
+      .category-card img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-bottom: 6px;
+      }
+      .category-card:hover {
+        border-color: #e53935;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      }
+
+      .whatsapp-float {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: #25d366;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 2500;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .whatsapp-float i {
+        font-size: 26px;
+      }
+      .whatsapp-float img {
+        width: 26px;
+        height: 26px;
+        display: block;
+      }
+      .whatsapp-float:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+        color: #fff;
+      }
+      @media (max-width: 576px) {
+        .whatsapp-float {
+          right: 16px;
+          bottom: 16px;
+          width: 46px;
+          height: 46px;
+        }
+        .whatsapp-float i {
+          font-size: 22px;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .category-mega { width: 100%; }
+        .category-mega .mega-wrap { flex-direction: column; }
+        .category-sidebar { min-width: 100%; }
+        .zen-actions { margin-top: 12px; }
+      }
+    </style>
+</head>
+<body>
+  <div class="zen-topbar">
+    <div class="container-fluid d-flex justify-content-between align-items-center px-4">
+      <div>Free delivery in Nairobi for orders over KES 5,000</div>
+      <div>
+        Need help?
+        <a href="tel:0759808915">Call 0759 808 915</a>
+        <a href="https://wa.me/254759808915" target="_blank">WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
+  <section class="row">
+    <div class="col-md-12">
+      <nav class="navbar navbar-expand-lg zen-nav px-3 py-1" style="position: relative; z-index: 1200;">
+
+        <div class="d-flex flex-column me-4 zen-brand-block">
+          <a class="navbar-brand d-flex align-items-center" href="/">
+            <img src="{{ url_for('static', filename='images/logo.jpeg') }}"
+              alt="Zenith Cart Logo"
+              width="38"
+              height="38"
+              class="me-2">
+            <span>Zenith <span class="text-success">Cart</span></span>
+          </a>
+          <div class="nav-item dropdown position-static mt-2">
+            <a class="nav-link dropdown-toggle cat-trigger" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-bars"></i> Category
+            </a>
+            <div class="dropdown-menu category-mega">
+              <div class="mega-wrap">
+                <div class="category-sidebar">
+                  <div class="title">Category</div>
+                  <a href="/category/men-watch"><span>Men Watch</span><span>&rsaquo;</span></a>
+                  <a href="/category/ladies-watch"><span>Ladies Watch</span><span>&rsaquo;</span></a>
+                  <a href="/category/jersey"><span>Jersey</span><span>&rsaquo;</span></a>
+                  <a href="/category/cleaning"><span>Cleaning</span><span>&rsaquo;</span></a>
+                  <a href="/categories"><span>All Categories</span><span>&rsaquo;</span></a>
+                </div>
+                <div class="category-main">
+                  <div class="category-tabs">
+                    <span class="active">Top Categories</span>
+                    <a href="/#new-products">What's New</a>
+                    <a href="/#flash-sales">Flash Sale</a>
+                  </div>
+                  <div class="category-grid">
+                    <a class="category-card" href="/category/men-watch">
+                      <img src="{{ url_for('static', filename='images/rolex1.jpg') }}" alt="Men Watch">
+                      <div class="fw-semibold">Men Watch</div>
+                    </a>
+                    <a class="category-card" href="/category/ladies-watch">
+                      <img src="{{ url_for('static', filename='images/3ladies1.jpg') }}" alt="Ladies Watch">
+                      <div class="fw-semibold">Ladies Watch</div>
+                    </a>
+                    <a class="category-card" href="/category/jersey">
+                      <img src="{{ url_for('static', filename='images/jersey1.jpg') }}" alt="Jersey">
+                      <div class="fw-semibold">Jersey</div>
+                    </a>
+                    <a class="category-card" href="/category/cleaning">
+                      <img src="{{ url_for('static', filename='images/foam1.jpeg') }}" alt="Cleaning">
+                      <div class="fw-semibold">Cleaning</div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <div class="d-lg-flex align-items-center gap-3 w-100">
+            <div class="navbar-nav zen-links">
+              <a href="/" class="nav-item nav-link"><i class="fa-solid fa-house"></i> Home</a>
+              <a href="/about" class="nav-item nav-link"><i class="fa-regular fa-gem"></i> About Us</a>
+              {% if session.get("is_admin") %}
+                <a class="nav-link" href="/admin"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a class="nav-link" href="/admin/products"><i class="fa-solid fa-box"></i> Products</a>
+                <a class="nav-link" href="/admin/orders"><i class="fa-solid fa-clipboard-list"></i> Orders</a>
+                <a class="nav-link" href="/upload"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</a>
+              {% endif %}
+            </div>
+
+            <div class="mx-lg-4 flex-grow-1">
+              <form class="zen-search" action="/search" method="GET" autocomplete="off">
+                <input id="searchInput" type="search" name="q" placeholder="Search watches, jerseys, brands..." required>
+                <button type="submit">Search</button>
+                <div id="searchSuggestions" class="search-suggestions"></div>
+              </form>
+              <div class="zen-trending d-none d-lg-flex">
+                Trending:
+                <a class="zen-chip" href="/category/men-watch">Men Watch</a>
+                <a class="zen-chip" href="/category/ladies-watch">Ladies Watch</a>
+                <a class="zen-chip" href="/category/jersey">Jersey</a>
+                <a class="zen-chip" href="/category/cleaning">Cleaning</a>
+              </div>
+            </div>
+
+            <div class="zen-actions ms-lg-auto">
+              <a href="/cart" class="position-relative zen-cart">
+                <svg class="zen-cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M3 5h2l2.4 9.5a2 2 0 0 0 2 1.5h8.6a2 2 0 0 0 2-1.6L21 8H7"></path>
+                  <circle cx="10" cy="19" r="1.5"></circle>
+                  <circle cx="17" cy="19" r="1.5"></circle>
+                </svg>
+                Cart
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {{ cart_count }}
+                </span>
+                {% endif %}
+              </a>
+
+              <div>
+                {% if session['key'] %}
+                  <div class="zen-user">Logged in: {{ session['key'] }}</div>
+                  <a class="zen-link" href="/logout">Logout</a>
+                {% else %}
+                  <a class="zen-link" href="/signin">Not Signed in? Sign In Now</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+      {% if site_message %}
+      <div class="container-fluid px-4 mt-2">
+        <div class="alert alert-{{ site_message_level }} mb-0">{{ site_message }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  <a
+    class="whatsapp-float"
+    href="https://wa.me/254759808915"
+    target="_blank"
+    aria-label="Chat on WhatsApp"
+    title="Chat on WhatsApp"
+  >
+    <img src="{{ url_for('static', filename='images/whatsapp.png') }}" alt="WhatsApp">
+  </a>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("searchInput");
+    const box = document.getElementById("searchSuggestions");
+    let controller = null;
+    let debounceTimer = null;
+    let activeIndex = -1;
+    const cache = new Map();
+
+    if (!input || !box) return;
+
+    const hideBox = () => {
+      box.classList.remove("show");
+      box.innerHTML = "";
+      activeIndex = -1;
+    };
+
+    const renderSuggestions = (data) => {
+      if (!Array.isArray(data) || data.length === 0) {
+        hideBox();
+        return;
+      }
+
+        box.innerHTML = data.map((item, idx) => {
+          const name = item.name || "Product";
+          const category = item.category || "";
+          const brand = item.brand ? `- ${item.brand}` : "";
+          const price = item.price ? `KES ${item.price}` : "";
+          const stock = item.stock !== null && item.stock !== undefined ? `Stock: ${item.stock}` : "";
+          const desc = item.description ? item.description.slice(0, 50) + (item.description.length > 50 ? "..." : "") : "";
+          const image = item.image_url || "{{ url_for('static', filename='images/logo.jpeg') }}";
+          return `
+            <a class="suggestion-item" data-index="${idx}" href="/single_item/${item.id}">
+              <img src="${image}" alt="${name}">
+            <div>
+              <div class="suggestion-title">${name}</div>
+              <div class="suggestion-meta">${category} ${brand} ${price} ${stock}</div>
+              <div class="suggestion-desc">${desc}</div>
+            </div>
+          </a>
+        `;
+      }).join("");
+
+      box.classList.add("show");
+      activeIndex = -1;
+    };
+
+    const fetchSuggestions = async (q) => {
+      if (cache.has(q)) {
+        renderSuggestions(cache.get(q));
+        return;
+      }
+
+      if (controller) controller.abort();
+      controller = new AbortController();
+
+      try {
+        const res = await fetch(`/search_suggestions?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        cache.set(q, data);
+        renderSuggestions(data);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          hideBox();
+        }
+      }
+    };
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim();
+      if (q.length < 2) {
+        hideBox();
+        return;
+      }
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchSuggestions(q);
+      }, 180);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      const items = box.querySelectorAll(".suggestion-item");
+      if (!items.length) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % items.length;
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+      } else if (e.key === "Enter") {
+        if (activeIndex >= 0 && items[activeIndex]) {
+          e.preventDefault();
+          items[activeIndex].click();
+          return;
+        }
+      } else if (e.key === "Escape") {
+        hideBox();
+        return;
+      } else {
+        return;
+      }
+
+      items.forEach((el, idx) => {
+        if (idx === activeIndex) {
+          el.classList.add("active");
+          el.scrollIntoView({ block: "nearest" });
+        } else {
+          el.classList.remove("active");
+        }
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!box.contains(e.target) && !input.contains(e.target)) {
+        hideBox();
+      }
+    });
+  });
+</script>
+</body>
+</html>

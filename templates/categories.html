@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Categories | ZenithCart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+  <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    .category-shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .cat-menu {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .cat-menu-header {
+      background: #e53935;
+      color: #fff;
+      padding: 14px 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cat-menu a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      text-decoration: none;
+      color: #111827;
+      border-top: 1px solid #f1f5f9;
+    }
+    .cat-menu a:hover {
+      background: #f8fafc;
+    }
+    .cat-icon {
+      width: 24px;
+      text-align: center;
+      margin-right: 10px;
+      color: #111827;
+    }
+    .cat-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+    .cat-grid {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .grid-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .cat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .cat-card {
+      text-align: center;
+      border: 1px solid #eef2f7;
+      border-radius: 12px;
+      padding: 16px 12px;
+      text-decoration: none;
+      color: #111827;
+      background: #fff;
+    }
+    .cat-card img {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .cat-card:hover {
+      border-color: #e53935;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .sub-nav {
+      display: flex;
+      gap: 20px;
+      font-weight: 700;
+      padding: 8px 0 14px;
+      border-bottom: 1px solid #eef2f7;
+      margin-bottom: 16px;
+    }
+    .sub-nav span,
+    .sub-nav a {
+      color: #111827;
+    }
+    .sub-nav a {
+      text-decoration: none;
+    }
+    .sub-nav a:hover {
+      color: #e53935;
+    }
+    .sub-nav .active {
+      color: #e53935;
+      border-bottom: 2px solid #e53935;
+      padding-bottom: 6px;
+    }
+    @media (max-width: 992px) {
+      .category-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-3">
+    {% include 'navbar.html' %}
+
+    <div class="category-shell">
+      <aside class="cat-menu">
+        <div class="cat-menu-header">
+          <i class="fa-solid fa-bars"></i>
+          Category
+        </div>
+        {% for cat in categories %}
+          <a href="/category/{{ cat.slug }}">
+            <span class="cat-label">
+              <span class="cat-icon"><i class="fa-regular fa-folder-open"></i></span>
+              {{ cat.name }}
+            </span>
+            <span>&raquo;</span>
+          </a>
+        {% endfor %}
+      </aside>
+
+      <section class="cat-grid">
+        <div class="sub-nav">
+          <span class="active">Top Categories</span>
+          <a href="/#new-products">What's New</a>
+          <a href="/#flash-sales">Flash Sale</a>
+        </div>
+
+        <div class="grid-title">Top Categories</div>
+        <div class="cat-cards">
+          {% for cat in categories %}
+            <a class="cat-card" href="/category/{{ cat.slug }}">
+              <img src="{{ url_for('static', filename='images/' + cat.image) }}" alt="{{ cat.name }}">
+              <div class="fw-semibold">{{ cat.name }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="mt-4">
+      {% include 'footer.html' %}
+    </div>
+  </div>
+</body>
+</html>
