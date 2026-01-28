@@ -113,7 +113,6 @@ def get_db_connection():
         connect_timeout=10,
         read_timeout=10,
         write_timeout=10,
-        cursorclass=pymysql.cursors.DictCursor,
     )
     if not ssl_disabled:
         connect_kwargs["ssl"] = {"ssl": {}}
