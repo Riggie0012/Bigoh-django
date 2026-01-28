@@ -87,13 +87,14 @@ def _is_safe_url(target):
 
 
 def _remember_next_url():
-    referrer = request.referrer or ""
-    if not _is_safe_url(referrer):
+    next_param = request.args.get("next", "")
+    candidate = next_param or (request.referrer or "")
+    if not _is_safe_url(candidate):
         return
-    path = urlparse(referrer).path or ""
+    path = urlparse(candidate).path or ""
     if path in ("/signin", "/signup"):
         return
-    session["next_url"] = referrer
+    session["next_url"] = candidate
 
 
 def _pop_next_url():
@@ -748,80 +749,94 @@ def add_product_review(product_id):
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        phone = request.form['phone']
-        password1 = request.form['password1']
-        password2 = request.form['password2']
-        human_verify = request.form.get('humanVerify')
-
-        strength_error = validate_password_strength(password1)
-        if strength_error:
-            return render_template('signup.html', error=strength_error)
-
-        if not human_verify:
-            return render_template('signup.html', error='Please confirm you are human to continue.')
-
-        if password1 != password2:
-            return render_template('signup.html', error='Password Do Not Match')
-
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        next_from_form = request.form.get("next", "")
+        if _is_safe_url(next_from_form):
+            session["next_url"] = next_from_form
         try:
-            cursor.execute("SELECT 1 FROM users WHERE email = %s LIMIT 1", (email,))
-            if cursor.fetchone():
+            username = request.form['username']
+            email = request.form['email']
+            phone = request.form['phone']
+            password1 = request.form['password1']
+            password2 = request.form['password2']
+            human_verify = request.form.get('humanVerify')
+
+            strength_error = validate_password_strength(password1)
+            if strength_error:
+                return render_template('signup.html', error=strength_error)
+
+            if not human_verify:
+                return render_template('signup.html', error='Please confirm you are human to continue.')
+
+            if password1 != password2:
+                return render_template('signup.html', error='Password Do Not Match')
+
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            try:
+                cursor.execute("SELECT 1 FROM users WHERE email = %s LIMIT 1", (email,))
+                if cursor.fetchone():
+                    connection.close()
+                    return render_template('signup.html', error='Email already registered. Please sign in.', error_field="email")
+                cursor.execute("SELECT 1 FROM users WHERE username = %s LIMIT 1", (username,))
+                if cursor.fetchone():
+                    connection.close()
+                    return render_template('signup.html', error='Username already taken. Please choose another.', error_field="username")
+            except Exception:
                 connection.close()
-                return render_template('signup.html', error='Email already registered. Please sign in.', error_field="email")
-            cursor.execute("SELECT 1 FROM users WHERE username = %s LIMIT 1", (username,))
-            if cursor.fetchone():
+                return render_template('signup.html', error='Unable to validate account details. Please try again.')
+
+            hashed_password = generate_password_hash(password1)
+
+            if users_has_is_admin():
+                sql = ''' 
+                     insert into users(username, password, email, phone, is_admin) 
+                     values(%s, %s, %s, %s, %s)
+                 '''
+                cursor.execute(sql, (username, hashed_password, email, phone, 0))
+            else:
+                sql = ''' 
+                     insert into users(username, password, email, phone) 
+                     values(%s, %s, %s, %s)
+                 '''
+                cursor.execute(sql, (username, hashed_password, email, phone))
+
+            try:
+                connection.commit()
+            except pymysql.err.IntegrityError:
                 connection.close()
-                return render_template('signup.html', error='Username already taken. Please choose another.', error_field="username")
+                return render_template('signup.html', error='Email or username already registered.', error_field="both")
+
+            try:
+                import sms
+                sms.send_sms(phone, "Thank you for Registering")
+            except Exception:
+                pass
+            try:
+                if email and "@" in email:
+                    subject, text_body, html_body = mailer.build_signup_email(username)
+                    mailer.send_email(email, subject, text_body, html_body)
+            except Exception:
+                pass
+
+            next_url = _pop_next_url()
+            if next_url:
+                return redirect(next_url)
+            return redirect(url_for("signin", signup="success"))
         except Exception:
-            connection.close()
-            return render_template('signup.html', error='Unable to validate account details. Please try again.')
-
-        hashed_password = generate_password_hash(password1)
-
-        if users_has_is_admin():
-            sql = ''' 
-                 insert into users(username, password, email, phone, is_admin) 
-                 values(%s, %s, %s, %s, %s)
-             '''
-            cursor.execute(sql, (username, hashed_password, email, phone, 0))
-        else:
-            sql = ''' 
-                 insert into users(username, password, email, phone) 
-                 values(%s, %s, %s, %s)
-             '''
-            cursor.execute(sql, (username, hashed_password, email, phone))
-
-        try:
-            connection.commit()
-        except pymysql.err.IntegrityError:
-            connection.close()
-            return render_template('signup.html', error='Email or username already registered.', error_field="both")
-
-        import sms
-        sms.send_sms(phone, "Thank you for Registering")
-        try:
-            if email and "@" in email:
-                subject, text_body, html_body = mailer.build_signup_email(username)
-                mailer.send_email(email, subject, text_body, html_body)
-        except Exception:
-            pass
-        next_url = _pop_next_url()
-        if next_url:
-            return redirect(next_url)
-        return redirect(url_for("signin", signup="success"))
+            app.logger.exception("Signup error")
+            return render_template('signup.html', error='Signup failed. Please try again.')
         
     else:
         _remember_next_url()
-        return render_template('signup.html')
+        return render_template('signup.html', next_url=session.get("next_url", ""))
     
 #Signin route
 @app.route('/signin', methods=['POST', 'GET'])
 def signin():
     if request.method == 'POST':
+        next_from_form = request.form.get("next", "")
+        if _is_safe_url(next_from_form):
+            session["next_url"] = next_from_form
         username = request.form['username']
         password = request.form['password']
 
@@ -881,7 +896,7 @@ def signin():
     else:
         _remember_next_url()
         success = "Registered Successfully, You can Signin Now" if request.args.get("signup") == "success" else ""
-        return render_template('signin.html', success=success)    
+        return render_template('signin.html', success=success, next_url=session.get("next_url", ""))    
 
 
 #logout route

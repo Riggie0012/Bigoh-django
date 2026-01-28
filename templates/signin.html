@@ -16,6 +16,7 @@
                   <span style="color:green;">{{success}}</span>
                   <span style="color:red;">{{error}}</span>
                   <form action="/signin" method="post">
+                      <input type="hidden" name="next" value="{{ next_url or '' }}">
                       <input type="text" name="username" placeholder="Your Username"
                       class="form-control"> <br>
 
