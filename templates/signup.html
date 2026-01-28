@@ -26,10 +26,20 @@
                   <span style="color:red;">{{error}}</span>
                   <form action="/signup" method="post">
                       <input type="text" name="username" placeholder="Your Username"
-                      class="form-control"> <br>
+                      class="form-control {% if error_field in ['username','both'] %}is-invalid{% endif %}"> 
+                      <div class="form-text">Username must be unique.</div>
+                      {% if error_field in ['username','both'] %}
+                      <div class="invalid-feedback d-block">This username is already taken.</div>
+                      {% endif %}
+                      <br>
 
                       <input type="email" name="email" placeholder="Your Email"
-                      class="form-control"> <br>
+                      class="form-control {% if error_field in ['email','both'] %}is-invalid{% endif %}"> 
+                      <div class="form-text">Use an email that hasn't been registered.</div>
+                      {% if error_field in ['email','both'] %}
+                      <div class="invalid-feedback d-block">This email is already registered.</div>
+                      {% endif %}
+                      <br>
 
                       <input type="tel" name="phone" placeholder="Your Phone"
                       class="form-control"> <br>
@@ -38,7 +48,7 @@
                       class="form-control" id="password1"> <br>
 
                       <input type="password" name="password2" placeholder="Confirm Password"
-                      class="form-control"> <br>
+                      class="form-control"> <br> 
 
                       <div class="border rounded p-3 mb-3 bg-light" id="passwordRules" style="display:none;">
                           <strong>Your password must contain:</strong>

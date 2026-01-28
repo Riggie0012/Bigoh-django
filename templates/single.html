@@ -83,12 +83,6 @@
               <div class="alert alert-danger py-2">Please provide a rating and comment.</div>
             {% endif %}
 
-            {% if has_seed %}
-              <div class="alert alert-warning py-2">
-                Sample reviews are shown for preview. Remove them for production.
-              </div>
-            {% endif %}
-
             {% if session.get('key') %}
             <form method="POST" action="/product/{{ product[0] }}/review" class="card p-3 mb-3">
               <div class="row g-2 align-items-end">
@@ -128,7 +122,6 @@
                     {% if i <= (r[1] or 0) %}&#9733;{% else %}&#9734;{% endif %}
                   {% endfor %}
                   {% if r[4] %}
-                    <span class="badge bg-secondary ms-2">Sample review</span>
                   {% endif %}
                 </div>
                 <div>{{ r[2] }}</div>

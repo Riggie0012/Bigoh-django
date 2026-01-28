@@ -311,6 +311,8 @@ def ensure_reviews_table(cur):
 
 
 def seed_sample_reviews(cur):
+    # Samples disabled: do not auto-insert seed reviews.
+    return False
     try:
         cur.execute("SELECT COUNT(*) FROM product_reviews")
         row = cur.fetchone()
@@ -362,43 +364,30 @@ def get_product_reviews(conn, product_id):
             if not ensure_reviews_table(cur):
                 return reviews, avg_rating, review_count, has_seed
             conn.commit()
-            if seed_sample_reviews(cur):
-                conn.commit()
 
             cur.execute(
                 """
                 SELECT user_name, rating, comment, created_at, is_seed
                 FROM product_reviews
-                WHERE product_id = %s
+                WHERE product_id = %s AND is_seed = 0
                 ORDER BY created_at DESC, id DESC
                 """,
                 (product_id,),
             )
             reviews = cur.fetchall() or []
-            has_seed = any(bool(r[4]) for r in reviews)
             cur.execute(
                 """
                 SELECT
-                    AVG(CASE WHEN is_seed = 0 THEN rating END),
-                    COUNT(CASE WHEN is_seed = 0 THEN 1 END),
                     AVG(rating),
                     COUNT(*)
                 FROM product_reviews
-                WHERE product_id = %s
+                WHERE product_id = %s AND is_seed = 0
                 """,
                 (product_id,),
             )
             row = cur.fetchone()
-            avg_real = float(_row_at(row, 0, 0) or 0)
-            count_real = int(_row_at(row, 1, 0) or 0)
-            avg_all = float(_row_at(row, 2, 0) or 0)
-            count_all = int(_row_at(row, 3, 0) or 0)
-            if count_real > 0:
-                avg_rating = avg_real
-                review_count = count_real
-            else:
-                avg_rating = avg_all
-                review_count = count_all
+            avg_rating = float(_row_at(row, 0, 0) or 0)
+            review_count = int(_row_at(row, 1, 0) or 0)
     except Exception:
         return reviews, avg_rating, review_count, has_seed
 
@@ -423,12 +412,10 @@ def get_ratings_for_products(conn, product_ids):
                 f"""
                 SELECT
                     product_id,
-                    AVG(CASE WHEN is_seed = 0 THEN rating END),
-                    COUNT(CASE WHEN is_seed = 0 THEN 1 END),
                     AVG(rating),
                     COUNT(*)
                 FROM product_reviews
-                WHERE product_id IN ({placeholders})
+                WHERE is_seed = 0 AND product_id IN ({placeholders})
                 GROUP BY product_id
                 """,
                 tuple(ids),
@@ -437,22 +424,12 @@ def get_ratings_for_products(conn, product_ids):
             rating_map = {}
             for row in rows:
                 pid = int(_row_at(row, 0, 0))
-                avg_real = float(_row_at(row, 1, 0) or 0)
-                count_real = int(_row_at(row, 2, 0) or 0)
-                avg_all = float(_row_at(row, 3, 0) or 0)
-                count_all = int(_row_at(row, 4, 0) or 0)
-                if count_real > 0:
-                    rating_map[pid] = {
-                        "avg": round(avg_real, 1),
-                        "count": count_real,
-                        "is_sample": False,
-                    }
-                else:
-                    rating_map[pid] = {
-                        "avg": round(avg_all, 1),
-                        "count": count_all,
-                        "is_sample": True,
-                    }
+                avg_rating = float(_row_at(row, 1, 0) or 0)
+                count_rating = int(_row_at(row, 2, 0) or 0)
+                rating_map[pid] = {
+                    "avg": round(avg_rating, 1),
+                    "count": count_rating,
+                }
             return rating_map
     except Exception:
         return {}
@@ -755,6 +732,19 @@ def signup():
             return render_template('signup.html', error='Password Do Not Match')
 
         connection = get_db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute("SELECT 1 FROM users WHERE email = %s LIMIT 1", (email,))
+            if cursor.fetchone():
+                connection.close()
+                return render_template('signup.html', error='Email already registered. Please sign in.', error_field="email")
+            cursor.execute("SELECT 1 FROM users WHERE username = %s LIMIT 1", (username,))
+            if cursor.fetchone():
+                connection.close()
+                return render_template('signup.html', error='Username already taken. Please choose another.', error_field="username")
+        except Exception:
+            connection.close()
+            return render_template('signup.html', error='Unable to validate account details. Please try again.')
 
         hashed_password = generate_password_hash(password1)
 
@@ -763,17 +753,20 @@ def signup():
                  insert into users(username, password, email, phone, is_admin) 
                  values(%s, %s, %s, %s, %s)
              '''
-            cursor = connection.cursor()
             cursor.execute(sql, (username, hashed_password, email, phone, 0))
         else:
             sql = ''' 
                  insert into users(username, password, email, phone) 
                  values(%s, %s, %s, %s)
              '''
-            cursor = connection.cursor()
             cursor.execute(sql, (username, hashed_password, email, phone))
 
-        connection.commit()
+        try:
+            connection.commit()
+        except pymysql.err.IntegrityError:
+            connection.close()
+            return render_template('signup.html', error='Email or username already registered.', error_field="both")
+
         import sms
         sms.send_sms(phone, "Thank you for Registering")
         try:
