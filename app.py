@@ -977,6 +977,16 @@ def search():
             continue
         filtered.append(row)
 
+    category_counts = {}
+    brand_counts = {}
+    for row in filtered:
+        category = str(_row_at(row, 2, "") or "").strip()
+        brand = str(_row_at(row, 3, "") or "").strip()
+        if category:
+            category_counts[category] = category_counts.get(category, 0) + 1
+        if brand:
+            brand_counts[brand] = brand_counts.get(brand, 0) + 1
+
     prices = []
     for row in filtered:
         price_val = _row_at(row, 4, None)
