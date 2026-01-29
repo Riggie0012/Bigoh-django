@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Phone</title>
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
+    <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+    <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        {% include 'navbar.html' %}
+        <section class="row">
+            <div class="col-md-5">
+                <h3>Verify Your Phone</h3>
+                <p class="text-muted">Enter the 6-digit code we sent to your phone.</p>
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form action="/verify-phone" method="post">
+                    <input type="text" name="otp" placeholder="Verification Code" class="form-control" required maxlength="6">
+                    <div class="form-text">Code expires in 10 minutes.</div>
+                    <br>
+                    <input type="submit" value="Verify Phone" class="btn btn-info">
+                </form>
+                <form action="/verify/resend" method="post" class="mt-3">
+                    <button type="submit" class="btn btn-outline-secondary">Resend Code & Email</button>
+                </form>
+                <br>
+                <a href="/signin">Back to Sign In</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

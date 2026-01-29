@@ -5,6 +5,8 @@ import os
 import json
 from datetime import timedelta, datetime
 from functools import wraps
+import secrets
+from authlib.integrations.flask_client import OAuth
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
@@ -32,7 +34,21 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_SESSION_SECURE", "0") == "1"
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
+remember_days_env = os.getenv("REMEMBER_ME_DAYS", "30")
+try:
+    remember_days = int(remember_days_env)
+except ValueError:
+    remember_days = 30
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=remember_days)
+
+oauth = OAuth(app)
+oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -229,14 +245,14 @@ def verify_password(stored_password, provided_password):
 
 
 def send_login_notifications(user_name, user_email, user_phone):
-    if user_phone:
+    if user_phone and validate_phone_number(user_phone):
         try:
             import sms
             sms.send_sms(user_phone, f"Hi {user_name}, you have successfully signed in to Bigoh.")
         except Exception:
             pass
 
-    if user_email and "@" in user_email:
+    if user_email and validate_email_format(user_email):
         try:
             forwarded = request.headers.get("X-Forwarded-For", "")
             ip_addr = forwarded.split(",")[0].strip() if forwarded else request.remote_addr
@@ -269,6 +285,250 @@ def validate_password_strength(password):
         return "Password must include at least 3 of: lowercase, uppercase, numbers, special characters."
     return None
 
+
+EMAIL_REGEX = re.compile(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+)
+
+
+def validate_email_format(email: str) -> bool:
+    if not email:
+        return False
+    if len(email) > 254:
+        return False
+    if " " in email:
+        return False
+    if email.count("@") != 1:
+        return False
+    local_part, domain = email.split("@", 1)
+    if not local_part or not domain:
+        return False
+    if ".." in local_part or ".." in domain:
+        return False
+    return bool(EMAIL_REGEX.match(email))
+
+
+def normalize_phone_number(phone: str) -> str:
+    if not phone:
+        return ""
+    cleaned = re.sub(r"[\\s\\-().]", "", phone)
+    if cleaned.startswith("+"):
+        digits = cleaned[1:]
+        prefix = "+"
+    else:
+        digits = cleaned
+        prefix = ""
+    if not digits.isdigit():
+        return ""
+    if len(digits) < 10 or len(digits) > 15:
+        return ""
+    return f"{prefix}{digits}"
+
+
+def validate_phone_number(phone: str) -> bool:
+    return bool(normalize_phone_number(phone))
+
+
+EMAIL_TOKEN_TTL = timedelta(hours=24)
+PHONE_OTP_TTL = timedelta(minutes=10)
+OTP_MAX_ATTEMPTS = 5
+RESET_OTP_TTL = timedelta(minutes=1)
+RESET_OTP_MAX_ATTEMPTS = 5
+
+
+def _now_utc():
+    return datetime.utcnow()
+
+
+def _schema_cache_key(table: str, column: str) -> str:
+    return f"SCHEMA_HAS_{table.upper()}_{column.upper()}"
+
+
+def table_has_column(conn, table: str, column: str) -> bool:
+    cache_key = _schema_cache_key(table, column)
+    cached = app.config.get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = %s
+                  AND COLUMN_NAME = %s
+                """,
+                (table, column),
+            )
+            row = cur.fetchone()
+            has_col = bool(row and _row_at(row, 0, 0) > 0)
+            app.config[cache_key] = has_col
+            return has_col
+    except Exception:
+        app.config[cache_key] = False
+        return False
+
+
+def ensure_user_verification_schema(conn) -> bool:
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_verifications (
+                    user_id INT PRIMARY KEY,
+                    email_token VARCHAR(120) NULL,
+                    email_token_expires DATETIME NULL,
+                    email_sent_at DATETIME NULL,
+                    phone_otp VARCHAR(10) NULL,
+                    phone_otp_expires DATETIME NULL,
+                    phone_sent_at DATETIME NULL,
+                    phone_otp_attempts INT NOT NULL DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX (email_token),
+                    INDEX (phone_otp)
+                )
+                """
+            )
+
+            if not table_has_column(conn, "users", "email_verified"):
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0"
+                )
+                app.config[_schema_cache_key("users", "email_verified")] = True
+            if not table_has_column(conn, "users", "phone_verified"):
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN phone_verified TINYINT(1) NOT NULL DEFAULT 0"
+                )
+                app.config[_schema_cache_key("users", "phone_verified")] = True
+            if not table_has_column(conn, "users", "email_verified_at"):
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN email_verified_at DATETIME NULL"
+                )
+                app.config[_schema_cache_key("users", "email_verified_at")] = True
+            if not table_has_column(conn, "users", "phone_verified_at"):
+                cur.execute(
+                    "ALTER TABLE users ADD COLUMN phone_verified_at DATETIME NULL"
+                )
+                app.config[_schema_cache_key("users", "phone_verified_at")] = True
+            if not table_has_column(conn, "user_verifications", "password_reset_otp"):
+                cur.execute(
+                    "ALTER TABLE user_verifications ADD COLUMN password_reset_otp VARCHAR(10) NULL"
+                )
+                app.config[_schema_cache_key("user_verifications", "password_reset_otp")] = True
+            if not table_has_column(conn, "user_verifications", "password_reset_expires"):
+                cur.execute(
+                    "ALTER TABLE user_verifications ADD COLUMN password_reset_expires DATETIME NULL"
+                )
+                app.config[_schema_cache_key("user_verifications", "password_reset_expires")] = True
+            if not table_has_column(conn, "user_verifications", "password_reset_attempts"):
+                cur.execute(
+                    "ALTER TABLE user_verifications ADD COLUMN password_reset_attempts INT NOT NULL DEFAULT 0"
+                )
+                app.config[_schema_cache_key("user_verifications", "password_reset_attempts")] = True
+
+        conn.commit()
+        return True
+    except Exception:
+        return False
+
+
+def generate_email_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def generate_phone_otp() -> str:
+    return f"{secrets.randbelow(1000000):06d}"
+
+
+def ensure_user_verification_row(cur, user_id: int):
+    cur.execute("INSERT IGNORE INTO user_verifications (user_id) VALUES (%s)", (user_id,))
+
+
+def update_user_verification(cur, user_id: int, fields: dict):
+    if not fields:
+        return
+    columns = ", ".join([f"{key}=%s" for key in fields.keys()])
+    params = list(fields.values()) + [user_id]
+    cur.execute(
+        f"UPDATE user_verifications SET {columns} WHERE user_id=%s",
+        params,
+    )
+
+
+def get_verification_state(conn, user_id: int) -> dict:
+    state = {"email_verified": True, "phone_verified": True}
+    if not table_has_column(conn, "users", "email_verified") or not table_has_column(
+        conn, "users", "phone_verified"
+    ):
+        return state
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT email_verified, phone_verified FROM users WHERE id=%s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return state
+            state["email_verified"] = bool(_row_at(row, 0, 1))
+            state["phone_verified"] = bool(_row_at(row, 1, 1))
+            return state
+    except Exception:
+        return state
+
+
+def build_verify_url(token: str) -> str:
+    base = os.getenv("APP_BASE_URL", "").rstrip("/")
+    if not base:
+        base = request.host_url.rstrip("/")
+    return f"{base}{url_for('verify_email')}?token={quote(token)}"
+
+
+def send_email_verification(user_name: str, user_email: str, token: str):
+    verify_url = build_verify_url(token)
+    subject, text_body, html_body = mailer.build_email_verification(
+        user_name, verify_url
+    )
+    mailer.send_email(user_email, subject, text_body, html_body)
+
+
+def send_phone_otp_sms(phone: str, otp: str):
+    import sms
+    sms.send_sms(phone, f"Your Bigoh verification code is {otp}. It expires in 10 minutes.")
+
+
+def send_password_reset_sms(phone: str, otp: str):
+    import sms
+    sms.send_sms(phone, f"Your Bigoh password reset code is {otp}. It expires in 1 minute.")
+
+
+def send_password_reset_email(user_name: str, user_email: str, otp: str):
+    subject, text_body, html_body = mailer.build_password_reset_email(
+        user_name, otp
+    )
+    mailer.send_email(user_email, subject, text_body, html_body)
+
+
+def _random_password() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def _unique_username_from_email(conn, email: str) -> str:
+    base = (email.split("@", 1)[0] or "user").strip().lower()
+    base = re.sub(r"[^a-z0-9_\\.\\-]", "", base) or "user"
+    candidate = base
+    with conn.cursor() as cur:
+        suffix = 0
+        while True:
+            cur.execute("SELECT 1 FROM users WHERE username=%s LIMIT 1", (candidate,))
+            if not cur.fetchone():
+                return candidate
+            suffix += 1
+            candidate = f"{base}{suffix}"
 
 
 
@@ -763,8 +1023,9 @@ def signup():
             session["next_url"] = next_from_form
         try:
             username = request.form['username']
-            email = request.form['email']
-            phone = request.form['phone']
+            email = request.form.get('email', '').strip().lower()
+            phone_raw = request.form.get('phone', '').strip()
+            phone = normalize_phone_number(phone_raw)
             password1 = request.form['password1']
             password2 = request.form['password2']
             human_verify = request.form.get('humanVerify')
@@ -779,9 +1040,16 @@ def signup():
             if password1 != password2:
                 return render_template('signup.html', error='Password Do Not Match')
 
+            if not email or not validate_email_format(email):
+                return render_template('signup.html', error='Please enter a valid email address.', error_field="email")
+
+            if not phone:
+                return render_template('signup.html', error='Please enter a valid phone number.', error_field="phone")
+
             connection = get_db_connection()
             cursor = connection.cursor()
             try:
+                ensure_user_verification_schema(connection)
                 cursor.execute("SELECT 1 FROM users WHERE email = %s LIMIT 1", (email,))
                 if cursor.fetchone():
                     connection.close()
@@ -816,21 +1084,49 @@ def signup():
                 return render_template('signup.html', error='Email or username already registered.', error_field="both")
 
             try:
-                import sms
-                sms.send_sms(phone, "Thank you for Registering")
+                user_id = cursor.lastrowid
+                now = _now_utc()
+                email_token = generate_email_token()
+                phone_otp = generate_phone_otp()
+                with connection.cursor() as ver_cur:
+                    ensure_user_verification_row(ver_cur, user_id)
+                    update_user_verification(
+                        ver_cur,
+                        user_id,
+                        {
+                            "email_token": email_token,
+                            "email_token_expires": now + EMAIL_TOKEN_TTL,
+                            "email_sent_at": now,
+                            "phone_otp": phone_otp,
+                            "phone_otp_expires": now + PHONE_OTP_TTL,
+                            "phone_sent_at": now,
+                            "phone_otp_attempts": 0,
+                        },
+                    )
+                connection.commit()
+            except Exception:
+                connection.close()
+                return render_template('signup.html', error='Signup failed. Please try again.')
+
+            try:
+                if validate_phone_number(phone):
+                    send_phone_otp_sms(phone, phone_otp)
             except Exception:
                 pass
             try:
-                if email and "@" in email:
-                    subject, text_body, html_body = mailer.build_signup_email(username)
-                    mailer.send_email(email, subject, text_body, html_body)
+                if validate_email_format(email):
+                    send_email_verification(username, email, email_token)
             except Exception:
                 pass
 
-            next_url = _pop_next_url()
-            if next_url:
-                return redirect(next_url)
-            return redirect(url_for("signin", signup="success"))
+            session["verify_user_id"] = user_id
+            session["verify_email"] = email
+            session["verify_phone"] = phone
+            set_site_message(
+                "We sent a verification link to your email and a code to your phone.",
+                "info",
+            )
+            return redirect(url_for("verify_phone"))
         except Exception:
             app.logger.exception("Signup error")
             return render_template('signup.html', error='Signup failed. Please try again.')
@@ -839,6 +1135,460 @@ def signup():
         _remember_next_url()
         return render_template('signup.html', next_url=session.get("next_url", ""))
     
+
+@app.route('/verify-email', methods=['GET'])
+def verify_email():
+    token = request.args.get("token", "").strip()
+    if not token:
+        set_site_message("Invalid verification link.", "danger")
+        return redirect(url_for("signin"))
+
+    connection = get_db_connection()
+    try:
+        ensure_user_verification_schema(connection)
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT v.user_id, v.email_token_expires, u.email, u.phone
+                FROM user_verifications v
+                JOIN users u ON u.id = v.user_id
+                WHERE v.email_token = %s
+                """,
+                (token,),
+            )
+            row = cur.fetchone()
+            if not row:
+                set_site_message("Verification link is invalid or already used.", "danger")
+                return redirect(url_for("signin"))
+            user_id = _row_at(row, 0)
+            expires_at = _row_at(row, 1)
+            user_email = _row_at(row, 2, "")
+            user_phone = _row_at(row, 3, "")
+            if expires_at and expires_at < _now_utc():
+                session["verify_user_id"] = user_id
+                session["verify_email"] = user_email
+                session["verify_phone"] = user_phone
+                set_site_message("Verification link has expired. Please request a new one.", "warning")
+                return redirect(url_for("verify_phone"))
+
+            cur.execute(
+                """
+                UPDATE users
+                SET email_verified = 1, email_verified_at = %s
+                WHERE id = %s
+                """,
+                (_now_utc(), user_id),
+            )
+            cur.execute(
+                """
+                UPDATE user_verifications
+                SET email_token = NULL, email_token_expires = NULL
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+        connection.commit()
+    except Exception:
+        set_site_message("Unable to verify email. Please try again.", "danger")
+        return redirect(url_for("signin"))
+    finally:
+        connection.close()
+
+    session["verify_user_id"] = user_id
+    session["verify_email"] = user_email
+    session["verify_phone"] = user_phone
+
+    connection = get_db_connection()
+    try:
+        verification = get_verification_state(connection, user_id)
+    finally:
+        connection.close()
+
+    if verification.get("phone_verified"):
+        set_site_message("Email verified. You can now sign in.", "success")
+        session.pop("verify_user_id", None)
+        session.pop("verify_email", None)
+        session.pop("verify_phone", None)
+        return redirect(url_for("signin"))
+
+    set_site_message("Email verified. Please verify your phone.", "info")
+    return redirect(url_for("verify_phone"))
+
+
+@app.route('/verify-phone', methods=['GET', 'POST'])
+def verify_phone():
+    user_id = session.get("verify_user_id") or session.get("username")
+    if not user_id:
+        set_site_message("Please sign in to verify your account.", "warning")
+        return redirect(url_for("signin"))
+
+    if request.method == 'GET':
+        connection = get_db_connection()
+        try:
+            ensure_user_verification_schema(connection)
+            verification = get_verification_state(connection, user_id)
+            if verification.get("email_verified") and verification.get("phone_verified"):
+                set_site_message("Your account is already verified.", "info")
+                return redirect(url_for("signin"))
+        finally:
+            connection.close()
+
+    if request.method == 'POST':
+        otp = (request.form.get("otp") or "").strip()
+        if not otp:
+            return render_template('verify_phone.html', error="Please enter the verification code.")
+
+        connection = get_db_connection()
+        try:
+            ensure_user_verification_schema(connection)
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT phone_otp, phone_otp_expires, phone_otp_attempts
+                    FROM user_verifications
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return render_template('verify_phone.html', error="Verification code not found. Please resend.")
+                code = _row_at(row, 0, "")
+                expires_at = _row_at(row, 1)
+                attempts = int(_row_at(row, 2, 0) or 0)
+                if attempts >= OTP_MAX_ATTEMPTS:
+                    return render_template('verify_phone.html', error="Too many attempts. Please resend a new code.")
+                if expires_at and expires_at < _now_utc():
+                    return render_template('verify_phone.html', error="Verification code has expired. Please resend.")
+                if otp != code:
+                    attempts += 1
+                    update_user_verification(
+                        cur,
+                        user_id,
+                        {"phone_otp_attempts": attempts},
+                    )
+                    connection.commit()
+                    return render_template('verify_phone.html', error="Incorrect code. Please try again.")
+
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET phone_verified = 1, phone_verified_at = %s
+                    WHERE id = %s
+                    """,
+                    (_now_utc(), user_id),
+                )
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "phone_otp": None,
+                        "phone_otp_expires": None,
+                        "phone_otp_attempts": 0,
+                    },
+                )
+            connection.commit()
+        except Exception:
+            return render_template('verify_phone.html', error="Unable to verify phone. Please try again.")
+        finally:
+            connection.close()
+
+        set_site_message("Phone verified. You can now sign in.", "success")
+        session.pop("verify_user_id", None)
+        session.pop("verify_email", None)
+        session.pop("verify_phone", None)
+        return redirect(url_for("signin"))
+
+    return render_template('verify_phone.html')
+
+
+@app.route('/verify/resend', methods=['POST'])
+def resend_verification():
+    user_id = session.get("verify_user_id") or session.get("username")
+    if not user_id:
+        set_site_message("Please sign in to resend verification.", "warning")
+        return redirect(url_for("signin"))
+
+    connection = get_db_connection()
+    try:
+        ensure_user_verification_schema(connection)
+        verification = get_verification_state(connection, user_id)
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT username, email, phone FROM users WHERE id=%s",
+                (user_id,),
+            )
+            user_row = cur.fetchone() or ()
+            user_name = _row_at(user_row, 0, "Customer")
+            user_email = _row_at(user_row, 1, "")
+            user_phone = _row_at(user_row, 2, "")
+            session["verify_email"] = user_email
+            session["verify_phone"] = user_phone
+
+            ensure_user_verification_row(cur, user_id)
+            now = _now_utc()
+            email_token = None
+            phone_otp = None
+            if not verification.get("email_verified"):
+                email_token = generate_email_token()
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "email_token": email_token,
+                        "email_token_expires": now + EMAIL_TOKEN_TTL,
+                        "email_sent_at": now,
+                    },
+                )
+            if not verification.get("phone_verified"):
+                phone_otp = generate_phone_otp()
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "phone_otp": phone_otp,
+                        "phone_otp_expires": now + PHONE_OTP_TTL,
+                        "phone_sent_at": now,
+                        "phone_otp_attempts": 0,
+                    },
+                )
+        connection.commit()
+    except Exception:
+        set_site_message("Unable to resend verification right now.", "danger")
+        return redirect(url_for("verify_phone"))
+    finally:
+        connection.close()
+
+    try:
+        if email_token and validate_email_format(user_email or ""):
+            send_email_verification(user_name, user_email, email_token)
+    except Exception:
+        pass
+    try:
+        if phone_otp and validate_phone_number(user_phone or ""):
+            send_phone_otp_sms(user_phone, phone_otp)
+    except Exception:
+        pass
+
+    set_site_message("Verification messages sent.", "info")
+    return redirect(url_for("verify_phone"))
+
+
+@app.route('/add-phone', methods=['GET', 'POST'])
+def add_phone():
+    user_id = session.get("pending_user_id")
+    if not user_id:
+        set_site_message("Please sign in to continue.", "warning")
+        return redirect(url_for("signin"))
+
+    if request.method == 'POST':
+        phone_raw = (request.form.get("phone") or "").strip()
+        phone = normalize_phone_number(phone_raw)
+        if not phone:
+            return render_template('add_phone.html', error="Please enter a valid phone number.")
+
+        connection = get_db_connection()
+        try:
+            ensure_user_verification_schema(connection)
+            with connection.cursor() as cur:
+                cur.execute("UPDATE users SET phone=%s WHERE id=%s", (phone, user_id))
+                now = _now_utc()
+                phone_otp = generate_phone_otp()
+                ensure_user_verification_row(cur, user_id)
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "phone_otp": phone_otp,
+                        "phone_otp_expires": now + PHONE_OTP_TTL,
+                        "phone_sent_at": now,
+                        "phone_otp_attempts": 0,
+                    },
+                )
+            connection.commit()
+        except Exception:
+            return render_template('add_phone.html', error="Unable to save phone number. Please try again.")
+        finally:
+            connection.close()
+
+        try:
+            send_phone_otp_sms(phone, phone_otp)
+        except Exception:
+            pass
+
+        session["verify_user_id"] = user_id
+        session["verify_phone"] = phone
+        session.pop("pending_user_id", None)
+        set_site_message("We sent a verification code to your phone.", "info")
+        return redirect(url_for("verify_phone"))
+
+    return render_template('add_phone.html')
+
+
+@app.route('/login/google')
+def login_google():
+    if not os.getenv("GOOGLE_CLIENT_ID") or not os.getenv("GOOGLE_CLIENT_SECRET"):
+        set_site_message("Google sign-in is not configured yet.", "warning")
+        return redirect(url_for("signin"))
+
+    remember_me = request.args.get("remember") == "1"
+    session["google_remember_me"] = remember_me
+    _remember_next_url()
+    redirect_uri = url_for("auth_google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route('/auth/google/callback')
+def auth_google_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception:
+        set_site_message("Google sign-in failed. Please try again.", "danger")
+        return redirect(url_for("signin"))
+
+    userinfo = token.get("userinfo")
+    if not userinfo:
+        try:
+            userinfo = oauth.google.userinfo()
+        except Exception:
+            userinfo = None
+
+    if not userinfo:
+        set_site_message("Unable to read Google profile.", "danger")
+        return redirect(url_for("signin"))
+
+    email = (userinfo.get("email") or "").strip().lower()
+    email_verified = bool(userinfo.get("email_verified"))
+    display_name = (userinfo.get("name") or "").strip() or email.split("@", 1)[0]
+
+    if not email or not validate_email_format(email):
+        set_site_message("Google account email is invalid.", "danger")
+        return redirect(url_for("signin"))
+
+    connection = get_db_connection()
+    try:
+        ensure_user_verification_schema(connection)
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, email, phone FROM users WHERE email=%s LIMIT 1",
+                (email,),
+            )
+            row = cur.fetchone()
+            if row:
+                user_id = _row_at(row, 0)
+                username = _row_at(row, 1, display_name)
+                phone = _row_at(row, 3, "") or ""
+            else:
+                username = _unique_username_from_email(connection, email)
+                password_hash = generate_password_hash(_random_password())
+                if users_has_is_admin():
+                    cur.execute(
+                        """
+                        INSERT INTO users (username, password, email, phone, is_admin, email_verified, email_verified_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            username,
+                            password_hash,
+                            email,
+                            "",
+                            0,
+                            1 if email_verified else 0,
+                            _now_utc() if email_verified else None,
+                        ),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO users (username, password, email, phone, email_verified, email_verified_at)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            username,
+                            password_hash,
+                            email,
+                            "",
+                            1 if email_verified else 0,
+                            _now_utc() if email_verified else None,
+                        ),
+                    )
+                user_id = cur.lastrowid
+                phone = ""
+            connection.commit()
+    except Exception:
+        set_site_message("Unable to complete Google sign-in.", "danger")
+        return redirect(url_for("signin"))
+    finally:
+        connection.close()
+
+    # Always skip phone verification for Google accounts.
+    try:
+        connection = get_db_connection()
+        ensure_user_verification_schema(connection)
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET phone_verified = 1,
+                    phone_verified_at = COALESCE(phone_verified_at, %s)
+                WHERE id = %s
+                """,
+                (_now_utc(), user_id),
+            )
+        connection.commit()
+    except Exception:
+        pass
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+    if not email_verified:
+        token = None
+        try:
+            connection = get_db_connection()
+            ensure_user_verification_schema(connection)
+            with connection.cursor() as cur:
+                now = _now_utc()
+                token = generate_email_token()
+                ensure_user_verification_row(cur, user_id)
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "email_token": token,
+                        "email_token_expires": now + EMAIL_TOKEN_TTL,
+                        "email_sent_at": now,
+                    },
+                )
+            connection.commit()
+        except Exception:
+            pass
+        finally:
+            if connection:
+                connection.close()
+        try:
+            send_email_verification(username, email, token)
+        except Exception:
+            pass
+        session["verify_user_id"] = user_id
+        session["verify_email"] = email
+        set_site_message("Please verify your email to continue.", "warning")
+        return redirect(url_for("verify_phone"))
+
+    session.clear()
+    remember_me = session.pop("google_remember_me", False)
+    session.permanent = remember_me
+    session["key"] = username
+    session["username"] = user_id
+    session["remember_me"] = remember_me
+    session["is_admin"] = username in ADMIN_USERS
+    session.pop("pending_user_id", None)
+
+    next_url = _pop_next_url()
+    return redirect(next_url or url_for("home"))
+
 #Signin route
 @app.route('/signin', methods=['POST', 'GET'])
 def signin():
@@ -848,6 +1598,7 @@ def signin():
             session["next_url"] = next_from_form
         username = request.form['username']
         password = request.form['password']
+        remember_me = request.form.get("remember_me") == "1"
 
         connection = get_db_connection()
 
@@ -879,18 +1630,77 @@ def signin():
                 cursor.execute("UPDATE users SET password=%s WHERE id=%s", (new_hash, user[0]))
                 connection.commit()
 
-            connection.close()
             # assume users table columns are (id, username, password, email, phone)
             user_id = user[0]
             user_name = user[1]
             user_email = user[3] if len(user) > 3 else None
-            user_email = user[3] if len(user) > 3 else None
             user_phone = user[4] if len(user) > 4 else None
+
+            ensure_user_verification_schema(connection)
+            verification = get_verification_state(connection, user_id)
+            if not verification.get("email_verified") or not verification.get("phone_verified"):
+                try:
+                    now = _now_utc()
+                    with connection.cursor() as ver_cur:
+                        ensure_user_verification_row(ver_cur, user_id)
+                        if not verification.get("email_verified") and validate_email_format(user_email or ""):
+                            email_token = generate_email_token()
+                            update_user_verification(
+                                ver_cur,
+                                user_id,
+                                {
+                                    "email_token": email_token,
+                                    "email_token_expires": now + EMAIL_TOKEN_TTL,
+                                    "email_sent_at": now,
+                                },
+                            )
+                        else:
+                            email_token = None
+
+                        if not verification.get("phone_verified") and validate_phone_number(user_phone or ""):
+                            phone_otp = generate_phone_otp()
+                            update_user_verification(
+                                ver_cur,
+                                user_id,
+                                {
+                                    "phone_otp": phone_otp,
+                                    "phone_otp_expires": now + PHONE_OTP_TTL,
+                                    "phone_sent_at": now,
+                                    "phone_otp_attempts": 0,
+                                },
+                            )
+                        else:
+                            phone_otp = None
+                    connection.commit()
+                except Exception:
+                    pass
+
+                try:
+                    if not verification.get("email_verified") and email_token and validate_email_format(user_email or ""):
+                        send_email_verification(user_name, user_email, email_token)
+                except Exception:
+                    pass
+                try:
+                    if not verification.get("phone_verified") and phone_otp and validate_phone_number(user_phone or ""):
+                        send_phone_otp_sms(user_phone, phone_otp)
+                except Exception:
+                    pass
+
+                session.clear()
+                session["verify_user_id"] = user_id
+                session["verify_email"] = user_email
+                session["verify_phone"] = user_phone
+                set_site_message("Please verify your email and phone to continue.", "warning")
+                connection.close()
+                return redirect(url_for("verify_phone"))
+
+            connection.close()
             session.clear()
+            session.permanent = remember_me
             session['key'] = user_name
             # `pay_on_delivery` expects `session['username']` to contain user id
             session['username'] = user_id
-            session.permanent = True
+            session['remember_me'] = remember_me
 
             if has_admin_col:
                 session["is_admin"] = bool(user[5]) or (user[1] in ADMIN_USERS)
@@ -906,6 +1716,147 @@ def signin():
         _remember_next_url()
         success = "Registered Successfully, You can Signin Now" if request.args.get("signup") == "success" else ""
         return render_template('signin.html', success=success, next_url=session.get("next_url", ""))    
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        phone_raw = (request.form.get("phone") or "").strip()
+        email_raw = (request.form.get("email") or "").strip().lower()
+        phone = normalize_phone_number(phone_raw)
+        email = email_raw if validate_email_format(email_raw) else ""
+        if not phone and not email:
+            return render_template('forgot_password.html', error="Please enter a valid phone number or email.")
+
+        connection = get_db_connection()
+        user_id = None
+        user_name = "Customer"
+        try:
+            ensure_user_verification_schema(connection)
+            with connection.cursor() as cur:
+                if phone:
+                    cur.execute("SELECT id, username FROM users WHERE phone=%s LIMIT 1", (phone,))
+                else:
+                    cur.execute("SELECT id, username FROM users WHERE email=%s LIMIT 1", (email,))
+                row = cur.fetchone()
+                if row:
+                    user_id = _row_at(row, 0)
+                    user_name = _row_at(row, 1, "Customer")
+                    otp = generate_phone_otp()
+                    ensure_user_verification_row(cur, user_id)
+                    update_user_verification(
+                        cur,
+                        user_id,
+                        {
+                            "password_reset_otp": otp,
+                            "password_reset_expires": _now_utc() + RESET_OTP_TTL,
+                            "password_reset_attempts": 0,
+                        },
+                    )
+            connection.commit()
+        except Exception:
+            return render_template('forgot_password.html', error="Unable to start password reset. Please try again.")
+        finally:
+            connection.close()
+
+        if user_id:
+            try:
+                if phone:
+                    send_password_reset_sms(phone, otp)
+                else:
+                    send_password_reset_email(user_name, email, otp)
+            except Exception:
+                pass
+            session["reset_user_id"] = user_id
+            session["reset_phone"] = phone
+            session["reset_email"] = email
+            session["reset_channel"] = "email" if email else "phone"
+        set_site_message("If that account is registered, we sent a reset code.", "info")
+        return redirect(url_for("reset_password"))
+
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    user_id = session.get("reset_user_id")
+    phone = session.get("reset_phone")
+    email = session.get("reset_email")
+    channel = session.get("reset_channel")
+    if request.method == 'POST':
+        otp = (request.form.get("otp") or "").strip()
+        password1 = request.form.get("password1")
+        password2 = request.form.get("password2")
+
+        if not user_id:
+            return render_template('reset_password.html', error="Please request a reset code first.")
+
+        if not otp:
+            return render_template('reset_password.html', error="Please enter the reset code.")
+
+        if password1 != password2:
+            return render_template('reset_password.html', error="Passwords do not match.")
+
+        strength_error = validate_password_strength(password1)
+        if strength_error:
+            return render_template('reset_password.html', error=strength_error)
+
+        connection = get_db_connection()
+        try:
+            ensure_user_verification_schema(connection)
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT password_reset_otp, password_reset_expires, password_reset_attempts
+                    FROM user_verifications
+                    WHERE user_id=%s
+                    """,
+                    (user_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return render_template('reset_password.html', error="Reset code not found. Please request a new one.")
+                stored_otp = _row_at(row, 0, "")
+                expires_at = _row_at(row, 1)
+                attempts = int(_row_at(row, 2, 0) or 0)
+                if attempts >= RESET_OTP_MAX_ATTEMPTS:
+                    return render_template('reset_password.html', error="Too many attempts. Please request a new code.")
+                if expires_at and expires_at < _now_utc():
+                    return render_template('reset_password.html', error="Reset code has expired. Please request a new one.")
+                if otp != stored_otp:
+                    update_user_verification(
+                        cur,
+                        user_id,
+                        {"password_reset_attempts": attempts + 1},
+                    )
+                    connection.commit()
+                    return render_template('reset_password.html', error="Incorrect code. Please try again.")
+
+                new_hash = generate_password_hash(password1)
+                cur.execute("UPDATE users SET password=%s WHERE id=%s", (new_hash, user_id))
+                update_user_verification(
+                    cur,
+                    user_id,
+                    {
+                        "password_reset_otp": None,
+                        "password_reset_expires": None,
+                        "password_reset_attempts": 0,
+                    },
+                )
+            connection.commit()
+        except Exception:
+            return render_template('reset_password.html', error="Unable to reset password. Please try again.")
+        finally:
+            connection.close()
+
+        session.pop("reset_user_id", None)
+        session.pop("reset_phone", None)
+        session.pop("reset_email", None)
+        session.pop("reset_channel", None)
+        set_site_message("Password updated. You can now sign in.", "success")
+        return redirect(url_for("signin"))
+
+    return render_template('reset_password.html', phone=phone or "", email=email or "", channel=channel or "")
 
 
 #logout route

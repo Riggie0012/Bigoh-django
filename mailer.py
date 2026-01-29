@@ -193,3 +193,50 @@ def build_signin_email(name: str, store_name: str = "Bigoh", ip: Optional[str] =
     )
     return subject, text, html
 
+
+def build_email_verification(name: str, verify_url: str, store_name: str = "Bigoh"):
+    now = datetime.now().strftime("%b %d, %Y %I:%M %p")
+    subject = f"Verify your {store_name} email"
+    text = (
+        f"Hi {name},\n\n"
+        f"Please verify your email to finish setting up your {store_name} account.\n"
+        f"Verification link: {verify_url}\n"
+        f"Requested on {now}.\n\n"
+        f"- {store_name} Team\n"
+    )
+    html = _build_email_html(
+        "Verify your email",
+        [
+            f"Hi {name},",
+            f"Please verify your email to finish setting up your {store_name} account.",
+            f"Requested on <strong>{now}</strong>.",
+            f"- {store_name} Team",
+        ],
+        "Verify Email",
+        verify_url,
+    )
+    return subject, text, html
+
+
+def build_password_reset_email(name: str, otp: str, store_name: str = "Bigoh"):
+    now = datetime.now().strftime("%b %d, %Y %I:%M %p")
+    subject = f"{store_name} password reset code"
+    text = (
+        f"Hi {name},\n\n"
+        f"Your password reset code is: {otp}\n"
+        f"This code expires in 1 minute. Requested on {now}.\n\n"
+        f"- {store_name} Team\n"
+    )
+    html = _build_email_html(
+        "Reset your password",
+        [
+            f"Hi {name},",
+            f"Your password reset code is <strong>{otp}</strong>.",
+            f"This code expires in 1 minute. Requested on <strong>{now}</strong>.",
+            f"- {store_name} Team",
+        ],
+        "Reset Password",
+        _cta_url("reset-password"),
+    )
+    return subject, text, html
+

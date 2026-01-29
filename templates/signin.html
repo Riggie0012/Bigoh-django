@@ -1,35 +1,219 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
     <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-      <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #eef1f5;
+            --card: #ffffff;
+            --text: #1c1f2a;
+            --muted: #7b8496;
+            --accent: #f37a2a;
+            --accent-dark: #e66514;
+            --soft: #f8fafc;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: "Manrope", sans-serif;
+            background: radial-gradient(circle at top left, #ffffff 0%, #eef1f5 45%, #e3e7ef 100%);
+            color: var(--text);
+        }
+        .auth-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 32px 0;
+        }
+        .auth-card {
+            background: var(--card);
+            border-radius: 28px;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+            overflow: hidden;
+        }
+        .auth-hero {
+            background: linear-gradient(145deg, #ff9738 0%, #f36b1c 55%, #f05518 100%);
+            color: #fff;
+            padding: 36px;
+            position: relative;
+        }
+        .auth-hero::after {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+        .auth-hero-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .hero-title {
+            font-size: clamp(1.8rem, 2.6vw, 2.6rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .hero-sub {
+            font-size: 0.98rem;
+            color: rgba(255,255,255,0.9);
+        }
+        .hero-image {
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.2);
+        }
+        .auth-panel {
+            padding: 40px 44px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        .brand-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #ffe6d2;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+        .brand-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .form-control {
+            background: var(--soft);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            border-radius: 16px;
+            padding: 12px 18px;
+            font-weight: 700;
+        }
+        .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+        .divider {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin: 18px 0;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            height: 1px;
+            background: var(--border);
+        }
+        .btn-alt {
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: #fff;
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        .muted { color: var(--muted); }
+        .link { color: var(--accent-dark); text-decoration: none; font-weight: 600; }
+        .auth-footer { font-size: 0.9rem; }
+        .remember-row { display: flex; justify-content: space-between; align-items: center; }
+        @media (max-width: 991px) {
+            .auth-panel { padding: 32px; }
+            .auth-hero { display: none; }
+        }
+    </style>
 </head>
 <body>
-     <div class="container">
-         {% include 'navbar.html' %}
-         <section class="row">
-             <div class="col-md-4">
-                  <h3>Login Account</h3>
-                  <span style="color:green;">{{success}}</span>
-                  <span style="color:red;">{{error}}</span>
-                  <form action="/signin" method="post">
-                      <input type="hidden" name="next" value="{{ next_url or '' }}">
-                      <input type="text" name="username" placeholder="Your Username"
-                      class="form-control"> <br>
+     <div class="container auth-shell">
+         <div class="auth-card w-100">
+             <div class="row g-0">
+                 <div class="col-lg-6 auth-hero">
+                     <div class="auth-hero-inner">
+                         <div class="hero-title">Welcome back to Bigoh.</div>
+                         <div class="hero-sub">Shop smarter with trusted picks, instant checkout, and order tracking in one place.</div>
+                         <div class="mt-2">
+                             <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="Bigoh" class="hero-image">
+                         </div>
+                     </div>
+                 </div>
+                 <div class="col-lg-6 auth-panel">
+                     <div class="brand mb-2">
+                         <span class="brand-badge">
+                             <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Bigoh">
+                         </span>
+                         Bigoh
+                     </div>
+                     <h2 class="fw-bold mb-1">Sign In</h2>
+                     <p class="muted mb-4">Please log in to your account</p>
 
-                      <input type="password" name="password" placeholder="Your Password"
-                      class="form-control"> <br>
+                     {% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+                     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-                      <input type="submit" value="Sign In" class="btn btn-info">
-                 </form>
-                 <br>
-                 <a href="/signup"> Don't Have an Account?, Create One </a>
+                     <form action="/signin" method="post">
+                         <input type="hidden" name="next" value="{{ next_url or '' }}">
+                         <div class="mb-3">
+                             <input type="text" name="username" placeholder="Your Username" class="form-control" required>
+                         </div>
+                         <div class="mb-2">
+                             <input type="password" name="password" placeholder="Your Password" class="form-control" required>
+                         </div>
+
+                         <div class="remember-row mb-3">
+                             <div class="form-check">
+                                 <input class="form-check-input" type="checkbox" value="1" id="remember_me" name="remember_me">
+                                 <label class="form-check-label" for="remember_me">Keep me signed in</label>
+                             </div>
+                             <a class="link" href="/forgot-password">Forgot password?</a>
+                         </div>
+
+                         <button type="submit" class="btn btn-primary w-100">Login</button>
+                     </form>
+
+                     <div class="divider">Or login with</div>
+
+                     <div class="row g-2">
+                         <div class="col-6">
+                             <button type="button" class="btn-alt w-100" id="googleSignInBtn">Google</button>
+                         </div>
+                         <div class="col-6">
+                             <a class="btn-alt w-100 d-inline-block text-center" href="/forgot-password">SMS login</a>
+                         </div>
+                     </div>
+
+                     <div class="auth-footer mt-4">
+                         <span class="muted">Don’t have an account?</span>
+                         <a class="link" href="/signup">Sign up</a>
+                     </div>
+                 </div>
              </div>
-         </section>
+         </div>
      </div>
+     <script>
+        (function () {
+            var googleBtn = document.getElementById("googleSignInBtn");
+            var remember = document.getElementById("remember_me");
+            if (!googleBtn) return;
+            googleBtn.addEventListener("click", function () {
+                var rememberOn = remember && remember.checked ? "1" : "0";
+                window.location.href = "/login/google?remember=" + rememberOn;
+            });
+        })();
+     </script>
 </body>
 </html>

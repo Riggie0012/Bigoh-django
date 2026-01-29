@@ -1,106 +1,243 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
+    <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
     <script src="../static/files/js/bootstrap.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .rule-status {
-            font-size: 0.85rem;
-            margin-left: 0.5rem;
+        :root {
+            --bg: #eef1f5;
+            --card: #ffffff;
+            --text: #1c1f2a;
+            --muted: #7b8496;
+            --accent: #f37a2a;
+            --accent-dark: #e66514;
+            --soft: #f8fafc;
+            --border: #e2e8f0;
         }
-        .rule-muted {
-            color: #6c757d;
+        body {
+            font-family: "Manrope", sans-serif;
+            background: radial-gradient(circle at top left, #ffffff 0%, #eef1f5 45%, #e3e7ef 100%);
+            color: var(--text);
+        }
+        .auth-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 32px 0;
+        }
+        .auth-card {
+            background: var(--card);
+            border-radius: 28px;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+            overflow: hidden;
+        }
+        .auth-hero {
+            background: linear-gradient(145deg, #ff9738 0%, #f36b1c 55%, #f05518 100%);
+            color: #fff;
+            padding: 36px;
+            position: relative;
+        }
+        .auth-hero::after {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+        .auth-hero-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .hero-title {
+            font-size: clamp(1.8rem, 2.6vw, 2.6rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .hero-sub {
+            font-size: 0.98rem;
+            color: rgba(255,255,255,0.9);
+        }
+        .hero-image {
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.2);
+        }
+        .auth-panel {
+            padding: 40px 44px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        .brand-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #ffe6d2;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+        .brand-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .form-control {
+            background: var(--soft);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            border-radius: 16px;
+            padding: 12px 18px;
+            font-weight: 700;
+        }
+        .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+        .muted { color: var(--muted); }
+        .link { color: var(--accent-dark); text-decoration: none; font-weight: 600; }
+        .auth-footer { font-size: 0.9rem; }
+        .rule-status { font-size: 0.85rem; margin-left: 0.5rem; }
+        .rule-muted { color: #6c757d; }
+        @media (max-width: 991px) {
+            .auth-panel { padding: 32px; }
+            .auth-hero { display: none; }
         }
     </style>
 </head>
 <body>
-     <div class="container">
-         {% include 'navbar.html' %}
-         <section class="row">
-             <div class="col-md-4">
-                  <h3>Create Account</h3>
-                  <span style="color:green;">{{success}}</span>
-                  <span style="color:red;">{{error}}</span>
-                  <form action="/signup" method="post">
-                      <input type="hidden" name="next" value="{{ next_url or '' }}">
-                      <input type="text" name="username" placeholder="Your Username"
-                      class="form-control {% if error_field in ['username','both'] %}is-invalid{% endif %}"> 
-                      <div class="form-text">Username must be unique.</div>
-                      {% if error_field in ['username','both'] %}
-                      <div class="invalid-feedback d-block">This username is already taken.</div>
-                      {% endif %}
-                      <br>
+     <div class="container auth-shell">
+         <div class="auth-card w-100">
+             <div class="row g-0">
+                 <div class="col-lg-6 auth-hero">
+                     <div class="auth-hero-inner">
+                         <div class="hero-title">Join Bigoh today.</div>
+                         <div class="hero-sub">Create an account to unlock quick checkout, verified reviews, and order updates.</div>
+                         <div class="mt-2">
+                             <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="Bigoh" class="hero-image">
+                         </div>
+                     </div>
+                 </div>
+                 <div class="col-lg-6 auth-panel">
+                     <div class="brand mb-2">
+                         <span class="brand-badge">
+                             <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Bigoh">
+                         </span>
+                         Bigoh
+                     </div>
+                     <h2 class="fw-bold mb-1">Create Account</h2>
+                     <p class="muted mb-4">Set up your account in a minute</p>
 
-                      <input type="email" name="email" placeholder="Your Email"
-                      class="form-control {% if error_field in ['email','both'] %}is-invalid{% endif %}"> 
-                      <div class="form-text">Use an email that hasn't been registered.</div>
-                      {% if error_field in ['email','both'] %}
-                      <div class="invalid-feedback d-block">This email is already registered.</div>
-                      {% endif %}
-                      <br>
+                     {% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+                     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-                      <input type="tel" name="phone" placeholder="Your Phone"
-                      class="form-control"> <br>
+                     <form action="/signup" method="post">
+                         <input type="hidden" name="next" value="{{ next_url or '' }}">
+                         <div class="mb-2">
+                             <input type="text" name="username" placeholder="Your Username"
+                             class="form-control {% if error_field in ['username','both'] %}is-invalid{% endif %}" required>
+                             <div class="form-text">Username must be unique.</div>
+                             {% if error_field in ['username','both'] %}
+                             <div class="invalid-feedback d-block">This username is already taken.</div>
+                             {% endif %}
+                         </div>
 
-                      <input type="password" name="password1" placeholder="Your Password"
-                      class="form-control" id="password1"> <br>
+                         <div class="mb-2">
+                             <input type="email" name="email" placeholder="Your Email" required
+                             class="form-control {% if error_field in ['email','both'] %}is-invalid{% endif %}">
+                             <div class="form-text">Use an email that hasn't been registered.</div>
+                             {% if error_field in ['email','both'] %}
+                             <div class="invalid-feedback d-block">This email is already registered.</div>
+                             {% endif %}
+                         </div>
 
-                      <input type="password" name="password2" placeholder="Confirm Password"
-                      class="form-control"> <br> 
+                         <div class="mb-2">
+                             <input type="tel" name="phone" placeholder="Your Phone" required
+                             pattern="\+?[0-9\s\-()]{10,20}"
+                             title="Enter a valid phone number (digits, spaces, parentheses, dashes, optional +)."
+                             class="form-control {% if error_field == 'phone' %}is-invalid{% endif %}">
+                             {% if error_field == 'phone' %}
+                             <div class="invalid-feedback d-block">Please enter a valid phone number.</div>
+                             {% endif %}
+                         </div>
 
-                      <div class="border rounded p-3 mb-3 bg-light" id="passwordRules" style="display:none;">
-                          <strong>Your password must contain:</strong>
-                          <ul class="mt-2 mb-0">
-                              <li id="rule-length" class="rule-muted">
-                                  At least 8 characters
-                                  <span class="rule-status" id="status-length">Missing</span>
-                              </li>
-                              <li id="rule-categories" class="rule-muted">
-                                  At least 3 of the following
-                                  <span class="rule-status" id="status-categories">0/4</span>
-                                  <ul>
-                                      <li id="rule-lower" class="rule-muted">
-                                          Lower case letters (a-z)
-                                          <span class="rule-status" id="status-lower">Missing</span>
-                                      </li>
-                                      <li id="rule-upper" class="rule-muted">
-                                          Upper case letters (A-Z)
-                                          <span class="rule-status" id="status-upper">Missing</span>
-                                      </li>
-                                      <li id="rule-number" class="rule-muted">
-                                          Numbers (0-9)
-                                          <span class="rule-status" id="status-number">Missing</span>
-                                      </li>
-                                      <li id="rule-special" class="rule-muted">
-                                          Special characters (e.g. !@#$%^&*)
-                                          <span class="rule-status" id="status-special">Missing</span>
-                                      </li>
-                                  </ul>
-                              </li>
-                              <li id="rule-repeat" class="rule-muted">
-                                  No more than 2 identical characters in a row
-                                  <span class="rule-status" id="status-repeat">Missing</span>
-                              </li>
-                          </ul>
-                      </div>
+                         <div class="mb-2">
+                             <input type="password" name="password1" placeholder="Your Password"
+                             class="form-control" id="password1" required>
+                         </div>
 
-                      <div class="form-check mb-3">
-                          <input class="form-check-input" type="checkbox" value="yes" id="humanVerify" name="humanVerify" required>
-                          <label class="form-check-label" for="humanVerify">
-                              I am human (click to verify)
-                          </label>
-                      </div>
+                         <div class="mb-2">
+                             <input type="password" name="password2" placeholder="Confirm Password"
+                             class="form-control" required>
+                         </div>
 
-                      <input type="submit" value="Sign Up" class="btn btn-info">
-                 </form>
-                 <br>
-                 <a href="/signin"> Already Have an Account?, Login </a>
+                         <div class="border rounded p-3 mb-3 bg-light" id="passwordRules" style="display:none;">
+                             <strong>Your password must contain:</strong>
+                             <ul class="mt-2 mb-0">
+                                 <li id="rule-length" class="rule-muted">
+                                     At least 8 characters
+                                     <span class="rule-status" id="status-length">Missing</span>
+                                 </li>
+                                 <li id="rule-categories" class="rule-muted">
+                                     At least 3 of the following
+                                     <span class="rule-status" id="status-categories">0/4</span>
+                                     <ul>
+                                         <li id="rule-lower" class="rule-muted">
+                                             Lower case letters (a-z)
+                                             <span class="rule-status" id="status-lower">Missing</span>
+                                         </li>
+                                         <li id="rule-upper" class="rule-muted">
+                                             Upper case letters (A-Z)
+                                             <span class="rule-status" id="status-upper">Missing</span>
+                                         </li>
+                                         <li id="rule-number" class="rule-muted">
+                                             Numbers (0-9)
+                                             <span class="rule-status" id="status-number">Missing</span>
+                                         </li>
+                                         <li id="rule-special" class="rule-muted">
+                                             Special characters (e.g. !@#$%^&*)
+                                             <span class="rule-status" id="status-special">Missing</span>
+                                         </li>
+                                     </ul>
+                                 </li>
+                                 <li id="rule-repeat" class="rule-muted">
+                                     No more than 2 identical characters in a row
+                                     <span class="rule-status" id="status-repeat">Missing</span>
+                                 </li>
+                             </ul>
+                         </div>
+
+                         <div class="form-check mb-3">
+                             <input class="form-check-input" type="checkbox" value="yes" id="humanVerify" name="humanVerify" required>
+                             <label class="form-check-label" for="humanVerify">
+                                 I am human (click to verify)
+                             </label>
+                         </div>
+
+                         <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                     </form>
+
+                     <div class="auth-footer mt-4">
+                         <span class="muted">Already have an account?</span>
+                         <a class="link" href="/signin">Sign in</a>
+                     </div>
+                 </div>
              </div>
-         </section> 
+         </div>
      </div>
 
      <script>
