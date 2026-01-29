@@ -1636,64 +1636,6 @@ def signin():
             user_email = user[3] if len(user) > 3 else None
             user_phone = user[4] if len(user) > 4 else None
 
-            ensure_user_verification_schema(connection)
-            verification = get_verification_state(connection, user_id)
-            if not verification.get("email_verified") or not verification.get("phone_verified"):
-                try:
-                    now = _now_utc()
-                    with connection.cursor() as ver_cur:
-                        ensure_user_verification_row(ver_cur, user_id)
-                        if not verification.get("email_verified") and validate_email_format(user_email or ""):
-                            email_token = generate_email_token()
-                            update_user_verification(
-                                ver_cur,
-                                user_id,
-                                {
-                                    "email_token": email_token,
-                                    "email_token_expires": now + EMAIL_TOKEN_TTL,
-                                    "email_sent_at": now,
-                                },
-                            )
-                        else:
-                            email_token = None
-
-                        if not verification.get("phone_verified") and validate_phone_number(user_phone or ""):
-                            phone_otp = generate_phone_otp()
-                            update_user_verification(
-                                ver_cur,
-                                user_id,
-                                {
-                                    "phone_otp": phone_otp,
-                                    "phone_otp_expires": now + PHONE_OTP_TTL,
-                                    "phone_sent_at": now,
-                                    "phone_otp_attempts": 0,
-                                },
-                            )
-                        else:
-                            phone_otp = None
-                    connection.commit()
-                except Exception:
-                    pass
-
-                try:
-                    if not verification.get("email_verified") and email_token and validate_email_format(user_email or ""):
-                        send_email_verification(user_name, user_email, email_token)
-                except Exception:
-                    pass
-                try:
-                    if not verification.get("phone_verified") and phone_otp and validate_phone_number(user_phone or ""):
-                        send_phone_otp_sms(user_phone, phone_otp)
-                except Exception:
-                    pass
-
-                session.clear()
-                session["verify_user_id"] = user_id
-                session["verify_email"] = user_email
-                session["verify_phone"] = user_phone
-                set_site_message("Please verify your email and phone to continue.", "warning")
-                connection.close()
-                return redirect(url_for("verify_phone"))
-
             connection.close()
             session.clear()
             session.permanent = remember_me
@@ -1706,6 +1648,60 @@ def signin():
                 session["is_admin"] = bool(user[5]) or (user[1] in ADMIN_USERS)
             else:
                 session["is_admin"] = (user[1] in ADMIN_USERS)
+
+            # Send verification reminders without blocking sign-in.
+            try:
+                reminder_conn = get_db_connection()
+                ensure_user_verification_schema(reminder_conn)
+                verification = get_verification_state(reminder_conn, user_id)
+                if not verification.get("email_verified") or not verification.get("phone_verified"):
+                    now = _now_utc()
+                    with reminder_conn.cursor() as ver_cur:
+                        ensure_user_verification_row(ver_cur, user_id)
+                        email_token = None
+                        phone_otp = None
+                        if not verification.get("email_verified") and validate_email_format(user_email or ""):
+                            email_token = generate_email_token()
+                            update_user_verification(
+                                ver_cur,
+                                user_id,
+                                {
+                                    "email_token": email_token,
+                                    "email_token_expires": now + EMAIL_TOKEN_TTL,
+                                    "email_sent_at": now,
+                                },
+                            )
+                        if not verification.get("phone_verified") and validate_phone_number(user_phone or ""):
+                            phone_otp = generate_phone_otp()
+                            update_user_verification(
+                                ver_cur,
+                                user_id,
+                                {
+                                    "phone_otp": phone_otp,
+                                    "phone_otp_expires": now + PHONE_OTP_TTL,
+                                    "phone_sent_at": now,
+                                    "phone_otp_attempts": 0,
+                                },
+                            )
+                    reminder_conn.commit()
+                    try:
+                        if email_token:
+                            send_email_verification(user_name, user_email, email_token)
+                    except Exception:
+                        pass
+                    try:
+                        if phone_otp:
+                            send_phone_otp_sms(user_phone, phone_otp)
+                    except Exception:
+                        pass
+                    set_site_message("Please verify your email and phone when you can.", "info")
+            except Exception:
+                pass
+            finally:
+                try:
+                    reminder_conn.close()
+                except Exception:
+                    pass
 
             send_login_notifications(user_name, user_email, user_phone)
 
