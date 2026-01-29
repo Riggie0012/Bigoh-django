@@ -16,6 +16,11 @@
   </div>
 
   <div class="container py-3">
+    <section class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+      <div class="hero-badge"><i class="fa-solid fa-bolt"></i> Flash Deals</div>
+      <div class="hero-title">Lightning savings, limited time only.</div>
+      <div class="hero-subtitle">Grab the best deals before time runs out. Stock moves fast.</div>
+    </section>
     <section class="flash-sale-wrap mt-4">
       <div class="flash-sale-head">
         <div class="flash-sale-title">
@@ -36,7 +41,7 @@
               {% set old_price = price / (1 - (discount / 100)) %}
               {% set remaining = item[5]|int if item[5] is not none else ((item[0]|int * 13) % 50 + 5) %}
               {% set bar_pct = 10 if remaining < 10 else (remaining if remaining < 100 else 100) %}
-              <li class="flash-sale-card">
+              <li class="flash-sale-card product-grid-card">
                 <a href="/single_item/{{ item[0]}}" class="flash-sale-image">
                   <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
                   <span class="flash-sale-badge">-{{ discount }}%</span>

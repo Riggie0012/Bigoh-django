@@ -9,21 +9,7 @@
   <script src="../static/files/js/bootstrap.bundle.min.js"></script>
   <style>
     .category-hero {
-      background: #111827;
-      color: #fff;
-      border-radius: 14px;
-      padding: 24px;
       margin-top: 12px;
-    }
-    .product-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .product-card img {
-      height: 180px;
-      object-fit: cover;
-      width: 100%;
     }
   </style>
 </head>
@@ -31,16 +17,17 @@
   <div class="container py-3">
     {% include 'navbar.html' %}
 
-    <div class="category-hero">
-      <h3 class="mb-0">Men Watches</h3>
-      <div class="text-light">Browse all men???s watches in one place.</div>
+    <div class="hero-banner category-hero" style="background-image:url('{{ url_for('static', filename='images/rolex1.jpg') }}'); background-size:cover; background-position:center;">
+      <div class="hero-badge"><i class="fa-solid fa-stopwatch"></i> Men Watches</div>
+      <div class="hero-title">Bold timepieces for every moment.</div>
+      <div class="hero-subtitle">Premium styles, verified reviews, and fast delivery.</div>
     </div>
 
     <div class="row g-3 mt-3">
       {% if products %}
         {% for item in products %}
         <div class="col-md-3 col-sm-6">
-          <div class="product-card">
+          <div class="product-grid-card">
             <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
             <div class="p-3">
               <div class="fw-semibold">{{ item[1] }}</div>

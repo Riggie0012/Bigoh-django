@@ -96,6 +96,11 @@
     </div>
 
     <div class="container-fluid px-4 py-4">
+      <section class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+        <div class="hero-badge"><i class="fa-solid fa-magnifying-glass"></i> Search</div>
+        <div class="hero-title">Find your next favorite piece.</div>
+        <div class="hero-subtitle">Explore curated styles and trending picks across Bigoh.</div>
+      </section>
       <div class="search-head mb-4">
         <div class="search-breadcrumb">
           <a href="/">Home</a> <span>&gt;</span> <a href="/categories">All Products</a>
@@ -203,7 +208,7 @@
           <div class="row g-3">
             {% for item in results %}
             <div class="col-sm-6 col-lg-4">
-              <div class="card result-card h-100">
+              <div class="card result-card product-grid-card h-100">
                 <img src="{{ image_url(item[7]) }}" class="card-img-top" alt="">
                 <div class="card-body d-flex flex-column">
                   <h6 class="card-title">{{ item[1] }}</h6>

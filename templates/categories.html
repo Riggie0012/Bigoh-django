@@ -130,6 +130,12 @@
   <div class="container py-3">
     {% include 'navbar.html' %}
 
+    <section class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+      <div class="hero-badge"><i class="fa-solid fa-layer-group"></i> Categories</div>
+      <div class="hero-title">Browse our most-loved collections.</div>
+      <div class="hero-subtitle">Find your perfect match across watches, jerseys, and essentials.</div>
+    </section>
+
     <div class="category-shell">
       <aside class="cat-menu">
         <div class="cat-menu-header">
@@ -157,7 +163,7 @@
         <div class="grid-title">Top Categories</div>
         <div class="cat-cards">
           {% for cat in categories %}
-            <a class="cat-card" href="/category/{{ cat.slug }}">
+            <a class="cat-card product-grid-card" href="/category/{{ cat.slug }}">
               <img src="{{ url_for('static', filename='images/' + cat.image) }}" alt="{{ cat.name }}">
               <div class="fw-semibold">{{ cat.name }}</div>
             </a>

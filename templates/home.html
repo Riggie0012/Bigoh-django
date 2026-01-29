@@ -30,7 +30,24 @@
 <body>
     <div class="container-fluid">
         {% include 'navbar.html' %}
-        <br>
+        <div class="container py-4">
+          <section class="home-hero mb-4">
+            <div class="home-hero-content">
+              <div class="hero-pill"><i class="fa-solid fa-bolt"></i> New arrivals weekly</div>
+              <h1>Shop bold picks, fast delivery, and real value.</h1>
+              <p>Discover curated watches, jerseys, and essentials with verified reviews and smooth checkout.</p>
+              <div class="home-hero-actions mt-3">
+                <a href="/categories" class="btn btn-primary">Shop categories</a>
+                <a href="/flash-sales" class="btn btn-outline-light">View flash sale</a>
+              </div>
+              <div class="hero-stats">
+                <div class="hero-stat"><span>10k+</span> Happy shoppers</div>
+                <div class="hero-stat"><span>24/7</span> Support &amp; tracking</div>
+                <div class="hero-stat"><span>Fast</span> Nairobi delivery</div>
+              </div>
+            </div>
+          </section>
+        </div>
         
         {% include 'carousel.html' %}
     </div>
