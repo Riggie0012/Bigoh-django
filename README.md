@@ -1,6 +1,6 @@
-# ZenithCart
+# Bigoh
 
-ZenithCart is a Flask-based ecommerce app with a storefront, cart/checkout, admin dashboard, flash sales, and customer reviews.
+Bigoh is a Flask-based ecommerce app with a storefront, cart/checkout, admin dashboard, flash sales, and customer reviews.
 
 ## Features (everything in the app)
 - Storefront pages: home, categories, product details
@@ -164,8 +164,8 @@ Tip: If you see MySQL connection errors, make sure you used the **public** MySQL
 ## Docker (optional)
 Build and run:
 ```bash
-docker build -t zenithcart .
-docker run --env-file .env -p 8000:8000 zenithcart
+docker build -t Bigoh .
+docker run --env-file .env -p 8000:8000 Bigoh
 ```
 
 ## Common issues
@@ -177,3 +177,4 @@ docker run --env-file .env -p 8000:8000 zenithcart
 ## Security
 - Never commit `.env` or any client secret files.
 - Rotate any secrets that were exposed.
+

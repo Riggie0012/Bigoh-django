@@ -32,7 +32,7 @@ def _smtp_config():
         port = 465 if use_ssl else 587
 
     from_email = os.getenv("EMAIL_FROM", "") or username
-    from_name = os.getenv("EMAIL_FROM_NAME", "ZenithCart")
+    from_name = os.getenv("EMAIL_FROM_NAME", "Bigoh")
 
     return {
         "enabled": enabled,
@@ -137,7 +137,7 @@ def send_email(to_email: str, subject: str, text_body: str, html_body: Optional[
         return None
 
 
-def build_signup_email(name: str, store_name: str = "ZenithCart"):
+def build_signup_email(name: str, store_name: str = "Bigoh"):
     now = datetime.now().strftime("%b %d, %Y %I:%M %p")
     subject = f"Welcome to {store_name}!"
     cta_url = _cta_url("signin")
@@ -155,13 +155,13 @@ def build_signup_email(name: str, store_name: str = "ZenithCart"):
             "If this wasn't you, please contact support immediately.",
             f"- {store_name} Team",
         ],
-        "Login Via ZenithCart",
+        "Login Via Bigoh",
         cta_url,
     )
     return subject, text, html
 
 
-def build_signin_email(name: str, store_name: str = "ZenithCart", ip: Optional[str] = None):
+def build_signin_email(name: str, store_name: str = "Bigoh", ip: Optional[str] = None):
     now = datetime.now().strftime("%b %d, %Y %I:%M %p")
     subject = f"New sign-in to your {store_name} account"
     cta_url = _cta_url("signin")
@@ -188,7 +188,8 @@ def build_signin_email(name: str, store_name: str = "ZenithCart", ip: Optional[s
     html = _build_email_html(
         "login in with SMS",
         body_lines,
-        "Login Via ZenithCart",
+        "Login Via Bigoh",
         cta_url,
     )
     return subject, text, html
+

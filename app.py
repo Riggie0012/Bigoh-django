@@ -232,7 +232,7 @@ def send_login_notifications(user_name, user_email, user_phone):
     if user_phone:
         try:
             import sms
-            sms.send_sms(user_phone, f"Hi {user_name}, you have successfully signed in to ZenithCart.")
+            sms.send_sms(user_phone, f"Hi {user_name}, you have successfully signed in to Bigoh.")
         except Exception:
             pass
 
@@ -1634,7 +1634,7 @@ def pay_on_delivery():
 
     # 7) Build best WhatsApp message
     lines = []
-    lines.append("ZENITHCART ORDER (PAY ON DELIVERY)")
+    lines.append("Bigoh ORDER (PAY ON DELIVERY)")
     lines.append("--------------------------------")
     if order_reference:
         lines.append(f"Order Ref: {order_reference}")
@@ -2391,3 +2391,4 @@ def whoami():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     app.run(host="0.0.0.0", port=port)
+
