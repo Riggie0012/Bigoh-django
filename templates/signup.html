@@ -221,15 +221,18 @@
                              </ul>
                          </div>
 
-                         <div class="form-check mb-3">
-                             <input class="form-check-input" type="checkbox" value="yes" id="humanVerify" name="humanVerify" required>
-                             <label class="form-check-label" for="humanVerify">
-                                 I am human (click to verify)
-                             </label>
-                         </div>
-
                          <button type="submit" class="btn btn-primary w-100">Create Account</button>
                      </form>
+
+                     <div class="text-center my-3 text-muted small">Or sign up with</div>
+                     <div class="row g-2">
+                       <div class="col-12">
+                         <a class="btn btn-outline-dark w-100" href="/login/google?remember=1">
+                           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px; height:18px; margin-right:8px; vertical-align:-3px;">
+                           Google
+                         </a>
+                       </div>
+                     </div>
 
                      <div class="auth-footer mt-4">
                          <span class="muted">Already have an account?</span>

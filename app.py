@@ -1028,14 +1028,9 @@ def signup():
             phone = normalize_phone_number(phone_raw)
             password1 = request.form['password1']
             password2 = request.form['password2']
-            human_verify = request.form.get('humanVerify')
-
             strength_error = validate_password_strength(password1)
             if strength_error:
                 return render_template('signup.html', error=strength_error)
-
-            if not human_verify:
-                return render_template('signup.html', error='Please confirm you are human to continue.')
 
             if password1 != password2:
                 return render_template('signup.html', error='Password Do Not Match')
