@@ -7,13 +7,10 @@
   <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
   <style>
     .carousel-stats {
-      position: absolute;
-      left: 8%;
-      bottom: 10%;
       display: grid;
       grid-template-columns: repeat(3, minmax(160px, 1fr));
       gap: 12px;
-      z-index: 2;
+      margin-top: 14px;
       max-width: 520px;
     }
     .carousel-stat {
@@ -31,9 +28,6 @@
     }
     @media (max-width: 768px) {
       .carousel-stats {
-        left: 6%;
-        right: 6%;
-        bottom: 6%;
         grid-template-columns: 1fr;
         max-width: none;
         gap: 8px;
@@ -66,6 +60,11 @@
                              <h5>Premium Weekly Watches Collection</h5>
                              <p>Stylish, reliable watches for everyday wear and special occasions</p>
                              <a class="btn zen-carousel-btn" href="/category/men-watch">Shop Watches</a>
+                             <div class="carousel-stats">
+                               <div class="carousel-stat"><span>10k+</span>Happy shoppers</div>
+                               <div class="carousel-stat"><span>24/7</span>Support &amp; tracking</div>
+                               <div class="carousel-stat"><span>Fast</span>Countrywide delivery</div>
+                             </div>
                          </div>
                      </div>
                      <div class="carousel-item">
@@ -75,6 +74,11 @@
                              <h5>Official EPL Jerseys</h5>
                              <p>Authentic designs at unbeatable prices.</p>
                              <a class="btn zen-carousel-btn" href="/category/jersey">Shop Jerseys</a>
+                             <div class="carousel-stats">
+                               <div class="carousel-stat"><span>10k+</span>Happy shoppers</div>
+                               <div class="carousel-stat"><span>24/7</span>Support &amp; tracking</div>
+                               <div class="carousel-stat"><span>Fast</span>Countrywide delivery</div>
+                             </div>
                          </div>
                      </div>
                       <div class="carousel-item">
@@ -84,13 +88,13 @@
                              <h5>A Watch That Lasts a Lifetime</h5>
                              <p>Timeless designs crafted to make every moment unforgettable.</p>
                              <a class="btn zen-carousel-btn" href="/category/ladies-watch">Explore Collection</a>
+                             <div class="carousel-stats">
+                               <div class="carousel-stat"><span>10k+</span>Happy shoppers</div>
+                               <div class="carousel-stat"><span>24/7</span>Support &amp; tracking</div>
+                               <div class="carousel-stat"><span>Fast</span>Countrywide delivery</div>
+                             </div>
                          </div>
                      </div>
-                 </div>
-                 <div class="carousel-stats">
-                   <div class="carousel-stat"><span>10k+</span>Happy shoppers</div>
-                   <div class="carousel-stat"><span>24/7</span>Support &amp; tracking</div>
-                   <div class="carousel-stat"><span>Fast</span>Countrywide delivery</div>
                  </div>
                  <!-- Controls -->
                   <!-- Carousel controls -->

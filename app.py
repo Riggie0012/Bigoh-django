@@ -1607,7 +1607,24 @@ def signin():
                select * from users where username = %s
             '''
         cursor = connection.cursor()
-        cursor.execute(sql, (username,))
+        identifier = (username or "").strip()
+        email_identifier = identifier.lower()
+        phone_identifier = normalize_phone_number(identifier)
+        if has_admin_col:
+            sql = '''
+               select id, username, password, email, phone, is_admin
+               from users
+               where username = %s or email = %s or phone = %s
+               limit 1
+            '''
+            cursor.execute(sql, (identifier, email_identifier, phone_identifier))
+        else:
+            sql = '''
+               select * from users
+               where username = %s or email = %s or phone = %s
+               limit 1
+            '''
+            cursor.execute(sql, (identifier, email_identifier, phone_identifier))
         user = cursor.fetchone()
 
         if not user:

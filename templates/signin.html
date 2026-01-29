@@ -165,13 +165,24 @@
                      {% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
                      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-                     <form action="/signin" method="post">
+                     <form action="/signin" method="post" autocomplete="on">
                          <input type="hidden" name="next" value="{{ next_url or '' }}">
                          <div class="mb-3">
-                             <input type="text" name="username" placeholder="Your Username" class="form-control" required>
+                             <input type="text" name="username" placeholder="Email address or phone number" class="form-control" autocomplete="username" required>
                          </div>
                          <div class="mb-2">
-                             <input type="password" name="password" placeholder="Your Password" class="form-control" required>
+                             <div class="position-relative">
+                               <input type="password" name="password" placeholder="Password" class="form-control pe-5" autocomplete="current-password" id="signinPassword" required>
+                               <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 p-0" id="togglePassword" aria-label="Show password" style="text-decoration:none;">
+                                 <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                   <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                                 </svg>
+                                 <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none;">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18M10.477 10.48A3 3 0 0 0 12 15a3 3 0 0 0 2.121-.879M9.88 5.092A9.956 9.956 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a9.956 9.956 0 0 1-1.412 2.829M6.228 6.228A9.956 9.956 0 0 0 2.458 12c1.274 4.057 5.064 7 9.542 7 1.51 0 2.955-.334 4.247-.934"/>
+                                 </svg>
+                               </button>
+                             </div>
                          </div>
 
                          <div class="remember-row mb-3">
@@ -212,6 +223,21 @@
             googleBtn.addEventListener("click", function () {
                 var rememberOn = remember && remember.checked ? "1" : "0";
                 window.location.href = "/login/google?remember=" + rememberOn;
+            });
+        })();
+        (function () {
+            var input = document.getElementById("signinPassword");
+            var toggle = document.getElementById("togglePassword");
+            var eyeOpen = document.getElementById("eyeOpen");
+            var eyeClosed = document.getElementById("eyeClosed");
+            if (!input || !toggle) return;
+            toggle.addEventListener("click", function () {
+                var isHidden = input.type === "password";
+                input.type = isHidden ? "text" : "password";
+                if (eyeOpen && eyeClosed) {
+                    eyeOpen.style.display = isHidden ? "none" : "inline";
+                    eyeClosed.style.display = isHidden ? "inline" : "none";
+                }
             });
         })();
      </script>
