@@ -89,7 +89,7 @@ def _is_safe_url(target):
 def _remember_next_url():
     next_param = request.args.get("next", "")
     candidate = next_param or (request.referrer or "")
-    if not _is_safe_url(candidate):
+    if not _is_safe_url(candidate): 
         return 
     path = urlparse(candidate).path or ""
     if path in ("/signin", "/signup"):
