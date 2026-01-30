@@ -21,7 +21,12 @@
 
   <div class="card p-4">
     <h5>Questions</h5>
-    <p>Contact us on WhatsApp or phone: <a href="https://wa.me/{{ support_whatsapp }}" target="_blank">{{ support_phone }}</a>.</p>
+    <p>Contact IT Support or Admin Support:</p>
+    <p>
+      <a href="mailto:{{ support_email }}">IT Support</a> ·
+      <a href="mailto:{{ support_email_admin }}">Admin Support</a> ·
+      <a href="https://wa.me/{{ support_whatsapp }}" target="_blank">WhatsApp</a>
+    </p>
   </div>
 </div>
 {% endblock %}

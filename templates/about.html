@@ -197,7 +197,12 @@
       <div class="col-md-6">
       <div class="info-card">
         <h5>Contact & Support</h5>
-        <p><i class="fa-solid fa-envelope"></i> Email support available on request.</p>
+        <p><i class="fa-solid fa-envelope"></i>
+            <a href="mailto:{{ support_email }}">IT Support</a>
+          </p>
+          <p><i class="fa-solid fa-user-shield"></i>
+            <a href="mailto:{{ support_email_admin }}">Admin Support</a>
+          </p>
           <p><i class="fa-solid fa-phone"></i> Call / SMS:
             <a href="tel:{{ support_phone|replace(' ', '') }}">{{ support_phone }}</a>
           </p>
