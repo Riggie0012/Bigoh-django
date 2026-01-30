@@ -1,4 +1,5 @@
 from flask import *
+from werkzeug.exceptions import HTTPException
 from urllib.parse import quote, urlparse, parse_qs
 import re
 import os
@@ -6,6 +7,12 @@ import json
 from datetime import timedelta, datetime
 from functools import wraps
 import secrets
+import urllib.request
+import urllib.error
+import hmac
+import time
+import logging
+from logging.handlers import RotatingFileHandler
 from authlib.integrations.flask_client import OAuth
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -40,6 +47,14 @@ SUPPORT_EMAIL_ADMIN = os.getenv("SUPPORT_EMAIL_ADMIN", "junioronunga8@gmail.com"
 SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "0759 808 915")
 SUPPORT_WHATSAPP = os.getenv("SUPPORT_WHATSAPP", "254759808915")
 SUPPORT_HOURS = os.getenv("SUPPORT_HOURS", "Daily 8:00am - 8:00pm EAT")
+STATIC_CDN_BASE = os.getenv("STATIC_CDN_BASE", "").strip()
+LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", "5"))
+LOW_STOCK_ALERT_INTERVAL_HOURS = int(os.getenv("LOW_STOCK_ALERT_INTERVAL_HOURS", "24"))
+LOW_STOCK_EMAIL_TO = os.getenv("LOW_STOCK_EMAIL_TO", "") or SUPPORT_EMAIL_ADMIN
+WHATSAPP_ALERTS_ENABLED = os.getenv("WHATSAPP_ALERTS_ENABLED", "0") == "1"
+WHATSAPP_ALERT_WEBHOOK = os.getenv("WHATSAPP_ALERT_WEBHOOK", "").strip()
+WHATSAPP_ALERT_TOKEN = os.getenv("WHATSAPP_ALERT_TOKEN", "").strip()
+WHATSAPP_ALERT_TO = os.getenv("WHATSAPP_ALERT_TO", "").strip() or SUPPORT_WHATSAPP
 REVIEW_AUTO_APPROVE = os.getenv("REVIEW_AUTO_APPROVE", "0") == "1"
 REVIEW_TRUSTED_USERS = {
     u.strip().lower()
@@ -49,11 +64,34 @@ REVIEW_TRUSTED_USERS = {
 REVIEW_MAX_IMAGE_BYTES = int(os.getenv("REVIEW_MAX_IMAGE_BYTES", "4000000"))
 REVIEW_MAX_IMAGE_PX = int(os.getenv("REVIEW_MAX_IMAGE_PX", "1600"))
 REVIEW_IMAGE_QUALITY = int(os.getenv("REVIEW_IMAGE_QUALITY", "80"))
+PRODUCT_MAX_IMAGE_BYTES = int(os.getenv("PRODUCT_MAX_IMAGE_BYTES", "2500000"))
+PRODUCT_MAX_IMAGE_PX = int(os.getenv("PRODUCT_MAX_IMAGE_PX", "1600"))
+PRODUCT_IMAGE_QUALITY = int(os.getenv("PRODUCT_IMAGE_QUALITY", "82"))
 BRAND_PARTNERS = [
     p.strip()
     for p in os.getenv("BRAND_PARTNERS", "").split(",")
     if p.strip()
 ]
+
+LOG_DIR = os.getenv("LOG_DIR", "logs")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+os.makedirs(LOG_DIR, exist_ok=True)
+log_path = os.path.join(LOG_DIR, "app.log")
+handler = RotatingFileHandler(log_path, maxBytes=2_000_000, backupCount=3)
+handler.setLevel(LOG_LEVEL)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+app.logger.addHandler(handler)
+app.logger.setLevel(LOG_LEVEL)
+
+RATE_LIMITS = {
+    "signin": (8, 60),
+    "signup": (6, 60),
+    "add_to_cart": (25, 60),
+    "pay_on_delivery": (5, 60),
+    "add_product_review": (3, 60),
+}
+_rate_store = {}
 
 
 UPLOAD_FOLDER = os.path.join("static", "images")
@@ -79,6 +117,61 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
+def cdn_url_for(endpoint, **values):
+    if endpoint == "static" and STATIC_CDN_BASE:
+        filename = values.get("filename", "")
+        return f"{STATIC_CDN_BASE.rstrip('/')}/{filename.lstrip('/')}"
+    return url_for(endpoint, **values)
+
+app.jinja_env.globals["url_for"] = cdn_url_for
+
+
+def generate_csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+app.jinja_env.globals["csrf_token"] = generate_csrf_token
+
+
+def _client_ip():
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _rate_limit_exceeded():
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return jsonify(ok=False, message="Too many requests. Please slow down.", level="warning"), 429
+    set_site_message("Too many requests. Please try again shortly.", "warning")
+    return redirect(request.referrer or url_for("home")), 429
+
+
+def rate_limit(key: str):
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+                return view(*args, **kwargs)
+            limit, window = RATE_LIMITS.get(key, (10, 60))
+            now = time.time()
+            ip = _client_ip()
+            bucket_key = f"{key}:{ip}"
+            bucket = _rate_store.get(bucket_key, [])
+            bucket = [t for t in bucket if now - t < window]
+            if len(bucket) >= limit:
+                _rate_store[bucket_key] = bucket
+                return _rate_limit_exceeded()
+            bucket.append(now)
+            _rate_store[bucket_key] = bucket
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
+
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -89,6 +182,15 @@ def _normalize_user_name(value) -> str:
 
 def _is_trusted_review_user(name: str) -> bool:
     return _normalize_user_name(name) in REVIEW_TRUSTED_USERS
+
+
+def compress_product_image(path: str) -> None:
+    compress_image(
+        path,
+        max_size=PRODUCT_MAX_IMAGE_PX,
+        quality=PRODUCT_IMAGE_QUALITY,
+        target_bytes=PRODUCT_MAX_IMAGE_BYTES,
+    )
 
 
 def compress_image(
@@ -160,6 +262,8 @@ def image_url(path):
     if not path.startswith("images/"):
         path = f"images/{path}"
 
+    if STATIC_CDN_BASE:
+        return f"{STATIC_CDN_BASE.rstrip('/')}/{path.lstrip('/')}"
     return url_for("static", filename=path)
 
 def _row_at(row, idx, default=None):
@@ -209,6 +313,30 @@ def _pop_next_url():
     if path in ("/signin", "/signup"):
         return None
     return next_url
+
+
+@app.before_request
+def csrf_protect():
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        token = (
+            request.form.get("csrf_token")
+            or request.headers.get("X-CSRF-Token")
+            or request.headers.get("X-CSRFToken")
+        )
+        session_token = session.get("_csrf_token", "")
+        if not token or not session_token or not hmac.compare_digest(str(token), str(session_token)):
+            app.logger.warning("CSRF blocked: %s %s from %s", request.method, request.path, _client_ip())
+            return "Invalid CSRF token.", 400
+
+
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith("/static/"):
+        response.headers.setdefault(
+            "Cache-Control",
+            "public, max-age=31536000, immutable",
+        )
+    return response
 
 
 @app.route("/favicon.ico")
@@ -311,6 +439,15 @@ def admin_required(view):
             return redirect(url_for("signin"))
         return view(*args, **kwargs)
     return wrapped
+
+
+@app.errorhandler(Exception)
+def handle_exception(exc):
+    if isinstance(exc, HTTPException):
+        app.logger.warning("HTTP error %s: %s", exc.code, exc)
+        return exc
+    app.logger.exception("Unhandled error: %s", exc)
+    return "Something went wrong. Please try again.", 500
 
 
 
@@ -956,6 +1093,108 @@ def ensure_sponsored_products_table(cur):
         return False
 
 
+def ensure_stock_alerts_table(cur):
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stock_alerts (
+                product_id INT PRIMARY KEY,
+                last_notified DATETIME
+            )
+            """
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _send_whatsapp_alert(message: str) -> bool:
+    if not WHATSAPP_ALERTS_ENABLED or not WHATSAPP_ALERT_WEBHOOK:
+        return False
+    payload = json.dumps(
+        {
+            "to": WHATSAPP_ALERT_TO,
+            "message": message,
+            "token": WHATSAPP_ALERT_TOKEN or None,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        WHATSAPP_ALERT_WEBHOOK,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8):
+            return True
+    except urllib.error.URLError:
+        return False
+
+
+def send_low_stock_alerts(conn, items):
+    if not items or LOW_STOCK_THRESHOLD <= 0:
+        return
+    try:
+        with conn.cursor() as cur:
+            if not ensure_stock_alerts_table(cur):
+                return
+            conn.commit()
+
+            product_ids = [int(_row_at(row, 0, 0)) for row in items if _row_at(row, 0, 0)]
+            if not product_ids:
+                return
+
+            placeholders = ", ".join(["%s"] * len(product_ids))
+            cur.execute(
+                f"SELECT product_id, last_notified FROM stock_alerts WHERE product_id IN ({placeholders})",
+                tuple(product_ids),
+            )
+            last_map = {int(_row_at(r, 0, 0)): _row_at(r, 1, None) for r in cur.fetchall() or []}
+
+            now = datetime.now()
+            cutoff = now - timedelta(hours=LOW_STOCK_ALERT_INTERVAL_HOURS)
+            to_alert = []
+            for row in items:
+                pid = int(_row_at(row, 0, 0))
+                stock = int(_row_at(row, 4, 0) or 0)
+                if stock > LOW_STOCK_THRESHOLD:
+                    continue
+                last = last_map.get(pid)
+                if last and last > cutoff:
+                    continue
+                to_alert.append(row)
+
+            if not to_alert:
+                return
+
+            lines = []
+            for row in to_alert:
+                lines.append(
+                    f"- {_row_at(row, 1, 'Item')} (#{_row_at(row, 0, '-')}) stock: {_row_at(row, 4, 0)}"
+                )
+            subject = f"Low stock alert ({len(to_alert)} items)"
+            text_body = "Low stock items:\n" + "\n".join(lines)
+            html_body = "<br>".join(lines)
+            if LOW_STOCK_EMAIL_TO:
+                mailer.send_email(LOW_STOCK_EMAIL_TO, subject, text_body, html_body)
+
+            _send_whatsapp_alert(text_body)
+
+            for row in to_alert:
+                pid = int(_row_at(row, 0, 0))
+                cur.execute(
+                    """
+                    INSERT INTO stock_alerts (product_id, last_notified)
+                    VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE last_notified=VALUES(last_notified)
+                    """,
+                    (pid, now),
+                )
+            conn.commit()
+    except Exception:
+        return
+
+
 def get_sponsored_products(conn, limit: int = 8):
     products = []
     try:
@@ -1217,6 +1456,7 @@ def single(product_id):
 
 
 @app.route("/product/<int:product_id>/review", methods=["POST"])
+@rate_limit("add_product_review")
 def add_product_review(product_id):
     if not session.get("key"):
         session["next_url"] = url_for("single", product_id=product_id)
@@ -1283,6 +1523,7 @@ def add_product_review(product_id):
 
 # Signup route
 @app.route('/signup', methods=['POST', 'GET'])
+@rate_limit("signup")
 def signup():
     if request.method == 'POST':
         next_from_form = request.form.get("next", "")
@@ -1853,6 +2094,7 @@ def auth_google_callback():
 
 #Signin route
 @app.route('/signin', methods=['POST', 'GET'])
+@rate_limit("signin")
 def signin():
     if request.method == 'POST':
         next_from_form = request.form.get("next", "")
@@ -2720,6 +2962,7 @@ def get_product(product_id):
     return product
 
 @app.route("/add_to_cart/<int:product_id>", methods=["POST"])
+@rate_limit("add_to_cart")
 def add_to_cart(product_id):
     wants_json = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -2882,6 +3125,7 @@ def get_db():
 
 #Whatsapp route
 @app.route("/pay_on_delivery", methods=["POST"])
+@rate_limit("pay_on_delivery")
 def pay_on_delivery():
     # 1) Require login
     if not session.get("username"):
@@ -3090,7 +3334,7 @@ def upload():
 
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], final_name)
         file.save(save_path)
-        compress_image(save_path)
+        compress_product_image(save_path)
 
         # Store relative path in DB (matches how you render: /static/....)
         image_url = f"images/{final_name}"  # because it's inside static/images/
@@ -3183,8 +3427,10 @@ def admin_dashboard():
         "products": 0,
         "orders": 0,
         "revenue": 0.0,
+        "quantity": 0,
         "pending": 0,
         "completed": 0,
+        "cancelled": 0,
     }
     orders = []
     top_products = []
@@ -3199,6 +3445,9 @@ def admin_dashboard():
     flash_products = []
     flash_duration_hours = 0
     flash_duration_minutes = 0
+    repeat_customers = 0
+    conversion_rate = 0.0
+    avg_order_value = 0.0
 
     try:
         conn = get_db_connection()
@@ -3208,8 +3457,24 @@ def admin_dashboard():
         metrics["products"] = _scalar(cur, "SELECT COUNT(*) FROM products", default=0)
         metrics["orders"] = _scalar(cur, "SELECT COUNT(*) FROM orders", default=0)
         metrics["revenue"] = _scalar(cur, "SELECT COALESCE(SUM(subtotal), 0) FROM orders", default=0.0)
+        metrics["quantity"] = _scalar(cur, "SELECT COALESCE(SUM(quantity), 0) FROM order_items", default=0)
         metrics["pending"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("PENDING",), default=0)
         metrics["completed"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("COMPLETED",), default=0)
+        metrics["cancelled"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("CANCELLED",), default=0)
+        repeat_customers = _scalar(
+            cur,
+            """
+            SELECT COUNT(*)
+            FROM (
+                SELECT user_id
+                FROM orders
+                WHERE user_id IS NOT NULL
+                GROUP BY user_id
+                HAVING COUNT(*) >= 2
+            ) t
+            """,
+            default=0,
+        )
 
         try:
             has_ref = orders_has_reference()
@@ -3298,14 +3563,21 @@ def admin_dashboard():
                 """
                 SELECT product_id, product_name, category, price, stock
                 FROM products
-                WHERE stock <= 5
+                WHERE stock <= %s
                 ORDER BY stock ASC, product_id DESC
                 LIMIT 6
                 """
+                ,
+                (LOW_STOCK_THRESHOLD,),
             )
             low_stock = cur.fetchall() or []
         except Exception:
             low_stock = []
+
+        try:
+            send_low_stock_alerts(conn, low_stock)
+        except Exception:
+            pass
 
         try:
             if ensure_flash_sale_tables(cur):
@@ -3380,11 +3652,18 @@ def admin_dashboard():
     completion_rate = 0.0
     if metrics["orders"]:
         completion_rate = round((metrics["completed"] / metrics["orders"]) * 100, 2)
+    if metrics["users"]:
+        conversion_rate = round((metrics["orders"] / metrics["users"]) * 100, 2)
+    if metrics["orders"]:
+        avg_order_value = round(metrics["revenue"] / metrics["orders"], 2)
 
     return render_template(
         "admin_dashboard.html",
         metrics=metrics,
         completion_rate=completion_rate,
+        conversion_rate=conversion_rate,
+        repeat_customers=repeat_customers,
+        avg_order_value=avg_order_value,
         orders=orders,
         recent_products=recent_products,
         low_stock=low_stock,
@@ -3393,6 +3672,7 @@ def admin_dashboard():
         status_values=json.dumps(status_values),
         category_labels=json.dumps(category_labels),
         category_values=json.dumps(category_values),
+        category_rows=category_rows,
         has_reference=orders_has_reference(),
         search=search,
         error=error,
@@ -3668,7 +3948,7 @@ def admin_edit_product(product_id):
                             i += 1
                         save_path = os.path.join(app.config["UPLOAD_FOLDER"], final_name)
                         file.save(save_path)
-                        compress_image(save_path)
+                        compress_product_image(save_path)
                         image_url = f"images/{final_name}"
 
                 cur.execute(

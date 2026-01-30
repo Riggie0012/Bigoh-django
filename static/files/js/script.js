@@ -46,6 +46,25 @@ if (typeof window.jQuery !== "undefined") {
     document.addEventListener("DOMContentLoaded", initFlashTimers);
 }
 
+function applyCsrfToForms() {
+    const meta = document.querySelector("meta[name='csrf-token']");
+    if (!meta) return;
+    const token = meta.getAttribute("content");
+    if (!token) return;
+    document.querySelectorAll("form").forEach((form) => {
+        const method = (form.getAttribute("method") || "GET").toUpperCase();
+        if (method !== "POST") return;
+        if (form.querySelector("input[name='csrf_token']")) return;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "csrf_token";
+        input.value = token;
+        form.appendChild(input);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", applyCsrfToForms);
+
 function updateCartBadge(count) {
     const badge = document.getElementById("cartCountBadge");
     if (!badge) return;
@@ -89,7 +108,8 @@ document.addEventListener("submit", (event) => {
         body: new FormData(form),
         headers: {
             "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || ""
         },
         credentials: "same-origin"
     })
