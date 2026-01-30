@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Returns & Refunds | {{ business_name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+    <div class="hero-badge"><i class="fa-solid fa-rotate-left"></i> Trust & Compliance</div>
+    <div class="hero-title">Returns & Refunds Policy</div>
+    <div class="hero-subtitle">Clear, fair, and designed to protect both customers and vendors.</div>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <h5>Returns Window</h5>
+    <p>Returns are accepted within 7 days of delivery for unused items in original packaging.</p>
+    <h5>Refunds</h5>
+    <p>Refunds are processed after inspection. Approved refunds are issued to the original payment method.</p>
+    <h5>Non-Returnable Items</h5>
+    <ul>
+      <li>Items that show signs of use or damage not caused by delivery.</li>
+      <li>Clearance items marked “Final Sale”.</li>
+    </ul>
+    <h5>How to Start a Return</h5>
+    <p>Contact support at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or WhatsApp <a href="https://wa.me/{{ support_whatsapp }}" target="_blank">{{ support_phone }}</a>.</p>
+  </div>
+
+  <div class="card p-4">
+    <h5>Dispute Resolution</h5>
+    <p>We review disputes fairly and transparently. Provide photos or evidence to help us resolve quickly.</p>
+  </div>
+</div>
+{% endblock %}

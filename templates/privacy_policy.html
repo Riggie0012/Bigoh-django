@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Privacy Policy | {{ business_name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+    <div class="hero-badge"><i class="fa-solid fa-shield"></i> Privacy</div>
+    <div class="hero-title">Privacy Policy</div>
+    <div class="hero-subtitle">Your data is handled responsibly and never sold.</div>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <h5>What We Collect</h5>
+    <p>Account details, delivery address, and order information needed to fulfill purchases.</p>
+    <h5>How We Use Data</h5>
+    <p>To process orders, provide support, and improve the shopping experience.</p>
+    <h5>Data Sharing</h5>
+    <p>We share only what is required with delivery or payment providers.</p>
+    <h5>Security</h5>
+    <p>We use secure connections and strict access controls to protect your data.</p>
+  </div>
+
+  <div class="card p-4">
+    <h5>Questions</h5>
+    <p>Email us at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+  </div>
+</div>
+{% endblock %}

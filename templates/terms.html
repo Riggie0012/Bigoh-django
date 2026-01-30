@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Terms of Service | {{ business_name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="hero-banner mb-4" style="background-image:url('{{ url_for('static', filename='images/hero.jpg') }}'); background-size:cover; background-position:center;">
+    <div class="hero-badge"><i class="fa-solid fa-file-contract"></i> Terms</div>
+    <div class="hero-title">Terms of Service</div>
+    <div class="hero-subtitle">Clear rules that protect both customers and vendors.</div>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <h5>Using the Site</h5>
+    <p>By placing an order, you agree to provide accurate information and comply with our policies.</p>
+    <h5>Pricing & Availability</h5>
+    <p>Prices and stock can change without notice. We confirm availability at checkout.</p>
+    <h5>Payment</h5>
+    <p>Payments are processed securely. Orders may be cancelled if payment fails.</p>
+    <h5>Returns</h5>
+    <p>Returns are governed by our <a href="/returns">Returns & Refunds Policy</a>.</p>
+  </div>
+
+  <div class="card p-4">
+    <h5>Contact</h5>
+    <p>Questions? Reach us at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+  </div>
+</div>
+{% endblock %}

@@ -32,13 +32,14 @@
               {% set remaining = item[5]|int if item[5] is not none else ((item[0]|int * 13) % 50 + 5) %}
               {% set bar_pct = 10 if remaining < 10 else (remaining if remaining < 100 else 100) %}
               <li class="flash-sale-card product-grid-card">
-              <span class="verified-badge" aria-label="Admin Approved" title="Admin Approved"></span>
+              
                 <a href="/single_item/{{ item[0]}}" class="flash-sale-image">
-                  <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
+                  <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}" loading="lazy" decoding="async">
                   <span class="flash-sale-badge">-{{ discount }}%</span>
                 </a>
                 <div class="flash-sale-name">{{ item[1] }}</div>
                 <div class="flash-sale-price">KSh {{ price|round(0, 'ceil') }}</div>
+                <div class="quality-check"><i class="fa-solid fa-circle-check"></i> Quality checked</div>
                 <div class="flash-sale-old">KSh {{ old_price|round(0, 'ceil') }}</div>
                 {% set rating = ratings.get(item[0]) if ratings is defined else None %}
                 {% if rating and rating.count > 0 %}

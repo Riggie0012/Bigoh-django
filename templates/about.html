@@ -170,25 +170,47 @@
         <h5>Why Customers Choose Us</h5>
         <p>Curated collections, transparent pricing, and verified authenticity.</p>
       </div>
+      <div class="info-card">
+        <h5>Business Details</h5>
+        <p>
+          {{ business_name }}
+          {% if business_reg_no %}
+            · Reg: {{ business_reg_no }}{% if business_reg_body %} ({{ business_reg_body }}){% endif %}
+          {% else %}
+            · Registration details available on request.
+          {% endif %}
+        </p>
+        <p>{{ business_address }}</p>
+        <p>Support hours: {{ support_hours }}</p>
+      </div>
+      <div class="info-card">
+        <h5>Brand Partners</h5>
+        {% if brand_partners %}
+          <p>{{ brand_partners|join(', ') }}</p>
+        {% else %}
+          <p>Partner brands available upon request.</p>
+        {% endif %}
+      </div>
     </section>
 
     <section class="row g-3 mt-3">
       <div class="col-md-6">
-        <div class="info-card">
-          <h5>Contact & Support</h5>
-          <p><i class="fa-solid fa-envelope"></i> 
-            <a href="mailto:riggie0012@gmail.com">IT Support</a>
+      <div class="info-card">
+        <h5>Contact & Support</h5>
+        <p><i class="fa-solid fa-envelope"></i> 
+            <a href="mailto:{{ support_email }}">Support: {{ support_email }}</a>
           </p>
           <p><i class="fa-solid fa-user-shield"></i>
-            <a href="mailto:junioronunga8@gmail.com"> Admin Support</a>
+            <a href="mailto:{{ support_email_admin }}">Admin: {{ support_email_admin }}</a>
           </p>
           <p><i class="fa-solid fa-phone"></i> Call / SMS:
-            <a href="tel:0759808915">0759 808 915</a>
+            <a href="tel:{{ support_phone|replace(' ', '') }}">{{ support_phone }}</a>
           </p>
           <p><i class="fa-brands fa-whatsapp"></i> WhatsApp:
-            <a href="https://wa.me/254759808915" target="_blank">Chat on WhatsApp</a>
+            <a href="https://wa.me/{{ support_whatsapp }}" target="_blank">Chat on WhatsApp</a>
           </p>
-        </div>
+          <p><i class="fa-solid fa-clock"></i> {{ support_hours }}</p>
+      </div>
       </div>
       <div class="col-md-6">
         <div class="info-card">

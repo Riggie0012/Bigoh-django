@@ -10,8 +10,8 @@
                <!-- product variable is indexed from 0  - 5  to access specific product details
                product[1] is product name, product[5] represent product image etc..  -->
                       <div class="card p-3 product-image-card">
-                        <span class="verified-badge" aria-label="Admin Approved" title="Admin Approved"></span>
-                        <img src="{{ image_url(product[7]) }}" alt="" class="img-fluid rounded">
+                        
+                        <img src="{{ image_url(product[7]) }}" alt="{{ product[1] }}" class="img-fluid rounded" loading="lazy" decoding="async">
                       </div>
                       <div class="mt-3">
                         <h3 class="fw-bold">{{ product[1] }}</h3>
@@ -36,6 +36,11 @@
                      {% else %}
                      <div class="text-muted small mb-2">No reviews yet.</div>
                      {% endif %}
+                     <div class="trust-strip mb-3">
+                       <span><i class="fa-solid fa-lock"></i> Secure checkout (SSL)</span>
+                       <span><i class="fa-solid fa-circle-check"></i> Quality checked</span>
+                       <span><i class="fa-solid fa-shield-halved"></i> Dispute support</span>
+                     </div>
                      {% if product[5] is not none and product[5]|int <= 5 %}
                      <div class="text-danger small mb-2">Low stock: {{ product[5] }} left</div>
                      {% endif %}
@@ -79,10 +84,39 @@
               <div class="alert alert-success py-2">Thanks! Your review has been submitted.</div>
             {% elif request.args.get('review') == 'error' %}
               <div class="alert alert-danger py-2">Please provide a rating and comment.</div>
+            {% elif request.args.get('review') == 'verified-only' %}
+              <div class="alert alert-warning py-2">Photo uploads are available after a completed purchase.</div>
+            {% elif request.args.get('review') == 'photo-type' %}
+              <div class="alert alert-danger py-2">Photo must be JPG, PNG, or WEBP.</div>
+            {% endif %}
+
+            {% if rating_breakdown %}
+            <div class="card p-3 mb-3">
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <div>
+                  <div class="fw-bold">Rating Summary</div>
+                  <div class="text-muted small">{{ review_count }} total reviews</div>
+                </div>
+                <div class="flex-grow-1">
+                  {% for star in range(5, 0, -1) %}
+                  {% set count = rating_breakdown.get(star, 0) %}
+                  {% set pct = (count / review_count * 100) if review_count else 0 %}
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="text-warning">{{ star }}★</span>
+                    <div class="progress flex-grow-1" style="height: 8px;">
+                      <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                    </div>
+                    <span class="text-muted small">{{ count }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div class="text-muted small mb-3">Verified purchase badges are shown when an order is completed.</div>
             {% endif %}
 
             {% if session.get('key') %}
-            <form method="POST" action="/product/{{ product[0] }}/review" class="card p-3 mb-3">
+            <form method="POST" action="/product/{{ product[0] }}/review" class="card p-3 mb-3" enctype="multipart/form-data">
               <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                   <label class="form-label">Rating</label>
@@ -102,6 +136,11 @@
                 <div class="col-md-2">
                   <button class="btn btn-primary w-100" type="submit">Submit</button>
                 </div>
+                <div class="col-md-12">
+                  <label class="form-label">Photo (verified purchases only)</label>
+                  <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control">
+                  <div class="form-text">Upload a real photo from your purchase to help others trust the product.</div>
+                </div>
               </div>
             </form>
             {% else %}
@@ -112,22 +151,48 @@
               {% for r in reviews %}
               <div class="border rounded p-3 mb-3">
                 <div class="d-flex justify-content-between align-items-center">
-                  <strong>{{ r[0] }}</strong>
-                  <span class="text-muted small">{{ r[3] }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <strong>{{ r.user_name }}</strong>
+                    {% if r.verified %}
+                      <span class="badge bg-success">Verified purchase</span>
+                    {% endif %}
+                  </div>
+                  <span class="text-muted small">{{ r.created_at }}</span>
                 </div>
                 <div class="text-warning small mb-1">
                   {% for i in range(1, 6) %}
-                    {% if i <= (r[1] or 0) %}&#9733;{% else %}&#9734;{% endif %}
+                    {% if i <= (r.rating or 0) %}&#9733;{% else %}&#9734;{% endif %}
                   {% endfor %}
-                  {% if r[4] %}
-                  {% endif %}
                 </div>
-                <div>{{ r[2] }}</div>
+                <div>{{ r.comment }}</div>
+                {% if r.photo %}
+                  <img src="{{ url_for('static', filename=r.photo) }}" alt="Customer photo" class="review-photo mt-2" loading="lazy" decoding="async">
+                {% endif %}
               </div>
               {% endfor %}
             {% else %}
               <div class="text-muted">No reviews yet. Be the first to review this product.</div>
             {% endif %}
+          </div>
+        </section>
+
+        <section class="row mt-4">
+          <div class="col-md-12">
+            <h4 class="fw-bold">Customer Photos</h4>
+            <div class="card p-3">
+              {% set photo_reviews = reviews|selectattr('photo')|list %}
+              {% if photo_reviews %}
+                <div class="row g-2">
+                  {% for r in photo_reviews %}
+                  <div class="col-6 col-md-3">
+                    <img src="{{ url_for('static', filename=r.photo) }}" alt="Customer photo" class="review-photo w-100" loading="lazy" decoding="async">
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-muted">Customer photos will appear here after verified purchases share them.</div>
+              {% endif %}
+            </div>
           </div>
         </section>
 

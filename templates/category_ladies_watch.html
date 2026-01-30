@@ -22,11 +22,12 @@
         {% for item in products %}
         <div class="col-md-3 col-sm-6">
           <div class="product-grid-card">
-            <span class="verified-badge" aria-label="Admin Approved" title="Admin Approved"></span>
-            <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}">
+            
+            <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}" loading="lazy" decoding="async">
             <div class="p-3">
               <div class="fw-semibold">{{ item[1] }}</div>
               <div class="text-danger mb-1">KES {{ item[4] }}</div>
+              <div class="quality-check"><i class="fa-solid fa-circle-check"></i> Quality checked</div>
               {% set rating = ratings.get(item[0]) if ratings is defined else None %}
               {% if rating and rating.count > 0 %}
               <div class="d-flex align-items-center gap-2 mb-2">

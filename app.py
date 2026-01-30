@@ -26,9 +26,24 @@ ADMIN_USERS = {
     for name in os.getenv("ADMIN_USERS", "myvpn").split(",")
     if name.strip()
 }
+BUSINESS_NAME = os.getenv("BUSINESS_NAME", "Bigoh")
+BUSINESS_ADDRESS = os.getenv("BUSINESS_ADDRESS", "Donholm Caltex, Nairobi")
+BUSINESS_REG_NO = os.getenv("BUSINESS_REG_NO", "")
+BUSINESS_REG_BODY = os.getenv("BUSINESS_REG_BODY", "")
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "riggie0012@gmail.com")
+SUPPORT_EMAIL_ADMIN = os.getenv("SUPPORT_EMAIL_ADMIN", "junioronunga8@gmail.com")
+SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "0759 808 915")
+SUPPORT_WHATSAPP = os.getenv("SUPPORT_WHATSAPP", "254759808915")
+SUPPORT_HOURS = os.getenv("SUPPORT_HOURS", "Daily 8:00am - 8:00pm EAT")
+BRAND_PARTNERS = [
+    p.strip()
+    for p in os.getenv("BRAND_PARTNERS", "").split(",")
+    if p.strip()
+]
 
 
 UPLOAD_FOLDER = os.path.join("static", "images")
+REVIEW_UPLOAD_FOLDER = os.path.join("static", "review_photos")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -603,12 +618,19 @@ def ensure_reviews_table(cur):
                 user_name VARCHAR(80) NOT NULL,
                 rating INT NOT NULL,
                 comment TEXT NOT NULL,
+                review_photo VARCHAR(255) NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 is_seed TINYINT(1) NOT NULL DEFAULT 0,
                 INDEX (product_id)
             )
             """
         )
+        conn = cur.connection
+        if not table_has_column(conn, "product_reviews", "review_photo"):
+            cur.execute(
+                "ALTER TABLE product_reviews ADD COLUMN review_photo VARCHAR(255) NULL"
+            )
+            app.config[_schema_cache_key("product_reviews", "review_photo")] = True
         return True
     except Exception:
         return False
@@ -663,22 +685,23 @@ def get_product_reviews(conn, product_id):
     avg_rating = 0.0
     review_count = 0
     has_seed = False
+    breakdown = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
     try:
         with conn.cursor() as cur:
             if not ensure_reviews_table(cur):
-                return reviews, avg_rating, review_count, has_seed
+                return reviews, avg_rating, review_count, has_seed, breakdown
             conn.commit()
 
             cur.execute(
                 """
-                SELECT user_name, rating, comment, created_at, is_seed
+                SELECT user_name, rating, comment, created_at, is_seed, review_photo
                 FROM product_reviews
                 WHERE product_id = %s AND is_seed = 0
                 ORDER BY created_at DESC, id DESC
                 """,
                 (product_id,),
             )
-            reviews = cur.fetchall() or []
+            raw_reviews = cur.fetchall() or []
             cur.execute(
                 """
                 SELECT
@@ -692,10 +715,60 @@ def get_product_reviews(conn, product_id):
             row = cur.fetchone()
             avg_rating = float(_row_at(row, 0, 0) or 0)
             review_count = int(_row_at(row, 1, 0) or 0)
-    except Exception:
-        return reviews, avg_rating, review_count, has_seed
+            cur.execute(
+                """
+                SELECT rating, COUNT(*)
+                FROM product_reviews
+                WHERE product_id = %s AND is_seed = 0
+                GROUP BY rating
+                """,
+                (product_id,),
+            )
+            for r in cur.fetchall() or []:
+                rating_val = int(_row_at(r, 0, 0) or 0)
+                if rating_val in breakdown:
+                    breakdown[rating_val] = int(_row_at(r, 1, 0) or 0)
 
-    return reviews, avg_rating, review_count, has_seed
+            verified_map = {}
+            for r in raw_reviews:
+                user_name = str(_row_at(r, 0, "") or "").strip()
+                if not user_name or user_name in verified_map:
+                    continue
+                cur.execute("SELECT id FROM users WHERE username=%s LIMIT 1", (user_name,))
+                user_row = cur.fetchone()
+                user_id = _row_at(user_row, 0, None) if user_row else None
+                if not user_id:
+                    verified_map[user_name] = False
+                    continue
+                cur.execute(
+                    """
+                    SELECT 1
+                    FROM orders o
+                    JOIN order_items oi ON oi.order_id = o.order_id
+                    WHERE o.user_id = %s
+                      AND oi.product_id = %s
+                      AND o.status IN ('COMPLETED', 'DELIVERED')
+                    LIMIT 1
+                    """,
+                    (user_id, product_id),
+                )
+                verified_map[user_name] = bool(cur.fetchone())
+
+            reviews = [
+                {
+                    "user_name": _row_at(r, 0, ""),
+                    "rating": _row_at(r, 1, 0),
+                    "comment": _row_at(r, 2, ""),
+                    "created_at": _row_at(r, 3, ""),
+                    "verified": verified_map.get(str(_row_at(r, 0, "") or "").strip(), False),
+                    "photo": _row_at(r, 5, ""),
+                }
+                for r in raw_reviews
+            ]
+    except Exception:
+        return reviews, avg_rating, review_count, has_seed, breakdown
+
+    return reviews, avg_rating, review_count, has_seed, breakdown
 
 
 def get_ratings_for_products(conn, product_ids):
@@ -865,6 +938,16 @@ def cart_count():
         site_message=msg,
         site_message_level=msg_level,
         image_url=image_url,
+        business_name=BUSINESS_NAME,
+        business_address=BUSINESS_ADDRESS,
+        business_reg_no=BUSINESS_REG_NO,
+        business_reg_body=BUSINESS_REG_BODY,
+        support_email=SUPPORT_EMAIL,
+        support_email_admin=SUPPORT_EMAIL_ADMIN,
+        support_phone=SUPPORT_PHONE,
+        support_whatsapp=SUPPORT_WHATSAPP,
+        support_hours=SUPPORT_HOURS,
+        brand_partners=BRAND_PARTNERS,
     )
 
 
@@ -876,6 +959,28 @@ def get_product(product_id):
     product = cursor.fetchone()
     connection.close()
     return product
+
+
+def has_verified_purchase(conn, user_id: int, product_id: int) -> bool:
+    if not user_id or not product_id:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM orders o
+                JOIN order_items oi ON oi.order_id = o.order_id
+                WHERE o.user_id = %s
+                  AND oi.product_id = %s
+                  AND o.status IN ('COMPLETED', 'DELIVERED')
+                LIMIT 1
+                """,
+                (user_id, product_id),
+            )
+            return bool(cur.fetchone())
+    except Exception:
+        return False
 
 
 
@@ -951,7 +1056,7 @@ def single(product_id):
         if not product:
             return redirect(url_for("home"))
 
-        reviews, avg_rating, review_count, has_seed = get_product_reviews(
+        reviews, avg_rating, review_count, has_seed, rating_breakdown = get_product_reviews(
             connection, product_id
         )
     finally:
@@ -968,6 +1073,7 @@ def single(product_id):
         avg_rating_int=avg_rating_int,
         review_count=review_count,
         has_seed=has_seed,
+        rating_breakdown=rating_breakdown,
     )
 
 
@@ -978,11 +1084,13 @@ def add_product_review(product_id):
         return redirect(url_for("signin"))
 
     name = session.get("key", "").strip()
+    user_id = session.get("username")
     comment = request.form.get("comment", "").strip()
     try:
         rating = int(request.form.get("rating", "0"))
     except ValueError:
         rating = 0
+    photo = request.files.get("photo")
 
     if not name or not comment or rating not in {1, 2, 3, 4, 5}:
         return redirect(url_for("single", product_id=product_id, review="error"))
@@ -1000,12 +1108,27 @@ def add_product_review(product_id):
             if not cur.fetchone():
                 return redirect(url_for("home"))
 
+            photo_path = None
+            if photo and photo.filename:
+                if not has_verified_purchase(conn, user_id, product_id):
+                    return redirect(url_for("single", product_id=product_id, review="verified-only"))
+                if not allowed_file(photo.filename):
+                    return redirect(url_for("single", product_id=product_id, review="photo-type"))
+                os.makedirs(REVIEW_UPLOAD_FOLDER, exist_ok=True)
+                ext = os.path.splitext(photo.filename)[1].lower()
+                safe_name = secure_filename(os.path.splitext(photo.filename)[0]) or "review"
+                token = secrets.token_hex(6)
+                filename = f"review_{product_id}_{user_id}_{safe_name}_{token}{ext}"
+                save_path = os.path.join(REVIEW_UPLOAD_FOLDER, filename)
+                photo.save(save_path)
+                photo_path = f"review_photos/{filename}"
+
             cur.execute(
                 """
-                INSERT INTO product_reviews (product_id, user_name, rating, comment, is_seed)
-                VALUES (%s, %s, %s, %s, 0)
+                INSERT INTO product_reviews (product_id, user_name, rating, comment, review_photo, is_seed)
+                VALUES (%s, %s, %s, %s, %s, 0)
                 """,
-                (product_id, name, rating, comment),
+                (product_id, name, rating, comment, photo_path),
             )
         conn.commit()
     finally:
@@ -2350,6 +2473,26 @@ def flash_sales_page():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+
+@app.route("/returns")
+def returns_refunds():
+    return render_template("returns_refunds.html")
+
+
+@app.route("/shipping")
+def shipping_policy():
+    return render_template("shipping_policy.html")
+
+
+@app.route("/privacy")
+def privacy_policy():
+    return render_template("privacy_policy.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
 
 
 #Add to cart route
