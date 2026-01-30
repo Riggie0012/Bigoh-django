@@ -45,3 +45,69 @@ if (typeof window.jQuery !== "undefined") {
 } else {
     document.addEventListener("DOMContentLoaded", initFlashTimers);
 }
+
+function updateCartBadge(count) {
+    const badge = document.getElementById("cartCountBadge");
+    if (!badge) return;
+    const value = Number.isFinite(count) ? count : parseInt(count, 10) || 0;
+    badge.textContent = value;
+    if (value > 0) {
+        badge.classList.remove("d-none");
+    } else {
+        badge.classList.add("d-none");
+    }
+}
+
+function showCartToast(message, level) {
+    const toast = document.getElementById("cartToast");
+    if (!toast || !message) return;
+    toast.textContent = message;
+    toast.classList.remove("success", "warning", "danger", "show");
+    if (level) toast.classList.add(level);
+    requestAnimationFrame(() => toast.classList.add("show"));
+    clearTimeout(showCartToast._timer);
+    showCartToast._timer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 1800);
+}
+
+document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!form.action || !form.action.includes("/add_to_cart/")) return;
+    event.preventDefault();
+
+    const submitBtn = form.querySelector("button[type='submit'], input[type='submit']");
+    const originalText = submitBtn && submitBtn.tagName === "BUTTON" ? submitBtn.textContent : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        if (originalText) submitBtn.textContent = "Adding...";
+    }
+
+    fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+        },
+        credentials: "same-origin"
+    })
+        .then(async (res) => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.ok === false) {
+                const msg = data.message || "Unable to add item.";
+                showCartToast(msg, data.level || "danger");
+                throw new Error(msg);
+            }
+            updateCartBadge(data.cart_count);
+            showCartToast(data.message || "Added to cart.", data.level || "success");
+        })
+        .catch(() => {})
+        .finally(() => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                if (originalText) submitBtn.textContent = originalText;
+            }
+        });
+});

@@ -536,11 +536,12 @@
                   <circle cx="17" cy="19" r="1.5"></circle>
                 </svg>
                 Cart
-                {% if cart_count > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                <span
+                  id="cartCountBadge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {% if cart_count <= 0 %}d-none{% endif %}"
+                >
                   {{ cart_count }}
                 </span>
-                {% endif %}
               </a>
 
               <div>

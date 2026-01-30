@@ -18,14 +18,43 @@
     crossorigin="anonymous"
     referrerpolicy="no-referrer"
   />
+  <style>
+    #cartToast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 3000;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+      background: #0f172a;
+      color: #fff;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+      font-size: 14px;
+    }
+    #cartToast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #cartToast.success { background: #16a34a; }
+    #cartToast.warning { background: #f59e0b; }
+    #cartToast.danger { background: #dc2626; }
+  </style>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
   {% block navbar %}{% include 'navbar.html' %}{% endblock %}
   {% block content %}{% endblock %}
   {% block footer %}{% include 'footer.html' %}{% endblock %}
+  <div id="cartToast" role="status" aria-live="polite"></div>
 
   <script src="../static/files/js/bootstrap.bundle.min.js"></script>
   {% block extra_scripts %}{% endblock %}
+  <script src="../static/files/js/script.js"></script>
 </body>
 </html>

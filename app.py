@@ -2363,6 +2363,10 @@ def get_product(product_id):
 
 @app.route("/add_to_cart/<int:product_id>", methods=["POST"])
 def add_to_cart(product_id):
+    wants_json = (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("Accept", "")
+    )
     try:
         qty = int(request.form.get("qty", 1))
     except ValueError:
@@ -2372,7 +2376,10 @@ def add_to_cart(product_id):
 
     product = get_product(product_id)
     if not product:
-        set_site_message("Product not found.", "danger")
+        message = "Product not found."
+        if wants_json:
+            return jsonify({"ok": False, "message": message, "level": "danger"}), 404
+        set_site_message(message, "danger")
         return redirect(request.referrer or url_for("home"))
 
     try:
@@ -2381,7 +2388,10 @@ def add_to_cart(product_id):
         stock = 0
 
     if stock <= 0:
-        set_site_message("This item is currently out of stock.", "danger")
+        message = "This item is currently out of stock."
+        if wants_json:
+            return jsonify({"ok": False, "message": message, "level": "danger"}), 409
+        set_site_message(message, "danger")
         return redirect(request.referrer or url_for("home"))
 
     cart = session.get("cart", {})  # {"12": 2, "15": 1}
@@ -2391,11 +2401,25 @@ def add_to_cart(product_id):
 
     if desired > stock:
         cart[pid] = stock
-        set_site_message(f"Only {stock} left in stock. Cart updated.", "warning")
+        message = f"Only {stock} left in stock. Cart updated."
+        level = "warning"
     else:
         cart[pid] = desired
+        message = "Added to cart."
+        level = "success"
 
     session["cart"] = cart
+    total_items = sum(cart.values())
+    if wants_json:
+        return jsonify(
+            {
+                "ok": True,
+                "cart_count": total_items,
+                "message": message,
+                "level": level,
+            }
+        )
+    set_site_message(message, level)
     return redirect(request.referrer or url_for("home"))
 
 
