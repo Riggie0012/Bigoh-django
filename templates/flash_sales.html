@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Flash Sales</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="../static/files/css/style.css">
-  <script src="../static/files/js/bootstrap.bundle.min.js"></script>
-  <script src="../static/files/js/script.js"></script>
-</head>
-<body>
-  <div class="container-fluid">
-    {% include 'navbar.html' %}
+{% extends 'base.html' %}
+{% block title %}Flash Sales{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    
   </div>
 
   <div class="container py-3">
@@ -77,8 +67,10 @@
     </section>
 
     <div class="mt-4">
-      {% include 'footer.html' %}
+      
     </div>
   </div>
-</body>
-</html>
+{% endblock %}
+{% block extra_scripts %}
+<script src="../static/files/js/script.js"></script>
+{% endblock %}

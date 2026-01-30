@@ -1,36 +1,11 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-    <!-- CSS Supporting Files-->
-     <link href = "../static/files/css/bootstrap.min.css"  rel = "stylesheet">
-     <link rel = "stylesheet" href="../static/files/css/lightslider.css">
-     <link rel = "stylesheet" href = "../static/files/css/style.css">
-
-     <!-- JavaScript Supporting Files-->
-      <script src = "../static/files/js/bootstrap.bundle.min.js"></script>
-      <script src = "../static/files/js/jquery.js"></script>
-      <script src = "../static/files/js/lightslider.js"></script>
-      <script src = "../static/files/js/script.js"></script>
-
-
-      <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-       integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
-       crossorigin="anonymous"
-       referrerpolicy="no-referrer"
-/>
-
-
-</head>
-<body>
-    <div class="container-fluid">
-        {% include 'navbar.html' %}
-        <br>
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block extra_head %}
+  <link rel="stylesheet" href="../static/files/css/lightslider.css">
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+                <br>
         
         {% include 'carousel.html' %}
     </div>
@@ -395,8 +370,9 @@
     </section>
 
     <br>
-
-    {% include 'footer.html' %} 
-    
-</body>
-</html>
+{% endblock %}
+{% block extra_scripts %}
+  <script src="../static/files/js/jquery.js"></script>
+  <script src="../static/files/js/lightslider.js"></script>
+  <script src="../static/files/js/script.js"></script>
+{% endblock %}

@@ -1,13 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Results</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-    <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-    <script src="../static/files/js/bootstrap.bundle.min.js"></script>
-    <style>
+{% extends 'base.html' %}
+{% block title %}Search Results{% endblock %}
+{% block extra_head %}
+<style>
       .search-shell { background: #f8fafc; }
       .search-head {
         background: #fff;
@@ -89,10 +83,11 @@
       .result-card .card-body { min-height: 160px; }
       .result-meta { font-size: 12px; color: #6b7280; }
     </style>
-</head>
-<body class="search-shell">
-    <div class="container-fluid">
-        {% include 'navbar.html' %}
+{% endblock %}
+{% block content %}
+<div class="search-shell">
+<div class="container-fluid">
+        
     </div>
 
     <div class="container-fluid px-4 py-4">
@@ -283,5 +278,5 @@
         });
       })();
     </script>
-</body>
-</html>
+</div>
+{% endblock %}

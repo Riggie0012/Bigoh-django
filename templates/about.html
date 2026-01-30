@@ -1,20 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>About | Bigoh</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-  <script src="../static/files/js/bootstrap.bundle.min.js"></script>
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4nHCqB6f+GO6zkRgZNpmj12xg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
-  <style>
+{% extends 'base.html' %}
+{% block title %}About | Bigoh{% endblock %}
+{% block extra_head %}
+<style>
     @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
     body {
@@ -139,10 +126,10 @@
       border: 0;
     }
   </style>
-</head>
-<body>
-  <div class="container py-4">
-    {% include 'navbar.html' %}
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+    
 
     <section class="about-hero mt-4">
       <div class="about-hero__content">
@@ -229,9 +216,7 @@
     </section>
 
     <div class="mt-4">
-      {% include 'footer.html' %}
+      
     </div>
   </div>
-</body>
-</html>
-
+{% endblock %}

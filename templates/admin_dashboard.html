@@ -1,15 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bigoh Admin</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
+{% extends 'base.html' %}
+{% block title %}Bigoh Admin{% endblock %}
+{% block extra_head %}
+<style>
     :root {
       --bg: #0e0f12;
       --panel: #15171c;
@@ -373,9 +365,13 @@
       }
     }
   </style>
-</head>
-<body>
-  <div class="shell">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="shell">
     <aside class="sidebar">
       <div class="brand">Bigoh Admin</div>
       <div class="nav-links">
@@ -677,8 +673,4 @@
       });
     });
   </script>
-</body>
-</html>
-
-
-
+{% endblock %}

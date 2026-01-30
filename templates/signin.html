@@ -1,14 +1,7 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In</title>
-    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-    <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-    <script src="../static/files/js/bootstrap.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <style>
+{% extends 'base.html' %}
+{% block title %}Sign In{% endblock %}
+{% block extra_head %}
+<style>
         :root {
             --bg: #eef1f5;
             --card: #ffffff;
@@ -148,9 +141,10 @@
             .auth-hero { display: none; }
         }
     </style>
-</head>
-<body>
-     <div class="container auth-shell">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div class="container auth-shell">
          <div class="auth-card w-100">
              <div class="row g-0">
                  <div class="col-lg-6 auth-hero">
@@ -254,5 +248,4 @@
             });
         })();
      </script>
-</body>
-</html>
+{% endblock %}

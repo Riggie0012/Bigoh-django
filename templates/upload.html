@@ -1,23 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Upload Product | Bigoh</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-
-  <style>
+{% extends 'base.html' %}
+{% block title %}Upload Product | Bigoh{% endblock %}
+{% block extra_head %}
+<style>
     body { background: #f5f7fb; }
     .card { border-radius: 14px; }
   </style>
-</head>
-<body>
-
-  {% include 'navbar.html' %}
-
-  <div class="container py-5">
+{% endblock %}
+{% block content %}
+<div class="container py-5">
     <div class="row justify-content-center">
       <div class="col-md-8 col-lg-7">
         <div class="card shadow p-4">
@@ -83,7 +73,4 @@
       </div>
     </div>
   </div>
-
-</body>
-</html>
-
+{% endblock %}

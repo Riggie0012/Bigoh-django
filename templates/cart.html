@@ -1,12 +1,7 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cart</title>
-  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/favicon.jpeg') }}">
-  <link href="../static/files/css/bootstrap.min.css" rel="stylesheet">
-  <style>
+{% extends 'base.html' %}
+{% block title %}Cart{% endblock %}
+{% block extra_head %}
+<style>
     .cart-card { border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08); }
     .cart-item { border: 1px solid #eef2f7; border-radius: 16px; background: #f8fafc; }
     .qty-btn { width: 42px; height: 42px; border-radius: 10px; }
@@ -16,11 +11,9 @@
     .checkout-btn { background:#ff7a00; border:none; font-weight:700; }
     .checkout-btn:hover { background:#e86f00; }
   </style>
-</head>
-<body>
-  {% include 'navbar.html' %}
-
-  <div class="container py-4">
+{% endblock %}
+{% block content %}
+<div class="container py-4">
     <div class="row g-4">
 
       <!-- LEFT: CART ITEMS -->
@@ -125,7 +118,4 @@
 
     </div>
   </div>
-</body>
-</html>
-
-
+{% endblock %}
