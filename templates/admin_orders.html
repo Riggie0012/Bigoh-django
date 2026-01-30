@@ -217,7 +217,7 @@
                     <a href="/admin/orders/{{ o[0] }}" class="btn btn-sm btn-outline-light">View</a>
                   </td>
                   <td>
-                    <form method="POST" action="/admin/order/{{ o[0] }}/status" class="d-flex gap-2">
+                    <form method="POST" action="{{ url_for('admin_update_order_status', order_id=o[0]) }}" class="d-flex gap-2">
                       <select name="status" class="form-select form-select-sm admin-select">
                         {% for s in ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"] %}
                           <option value="{{ s }}" {% if o[6] == s %}selected{% endif %}>{{ s }}</option>
@@ -239,7 +239,7 @@
                     <a href="/admin/orders/{{ o[0] }}" class="btn btn-sm btn-outline-light">View</a>
                   </td>
                   <td>
-                    <form method="POST" action="/admin/order/{{ o[0] }}/status" class="d-flex gap-2">
+                    <form method="POST" action="{{ url_for('admin_update_order_status', order_id=o[0]) }}" class="d-flex gap-2">
                       <select name="status" class="form-select form-select-sm admin-select">
                         {% for s in ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"] %}
                           <option value="{{ s }}" {% if o[5] == s %}selected{% endif %}>{{ s }}</option>
