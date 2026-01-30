@@ -446,25 +446,6 @@
       </div>
     </section>
 
-    <section class="row mt-5">
-      <div class="col-md-12">
-        <h4 class="section-title">Customer Photos</h4>
-        <div class="single-card p-3">
-          {% set photo_reviews = reviews|selectattr('photo')|list %}
-          {% if photo_reviews %}
-            <div class="row g-2">
-              {% for r in photo_reviews %}
-              <div class="col-6 col-md-3">
-                <img src="{{ url_for('static', filename=r.photo) }}" alt="Customer photo" class="review-photo w-100" loading="lazy" decoding="async">
-              </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="text-muted">Customer photos will appear here after verified purchases share them.</div>
-          {% endif %}
-        </div>
-      </div>
-    </section>
   </div>
 </div>
 {% endblock %}

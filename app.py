@@ -938,6 +938,47 @@ def ensure_flash_sale_tables(cur):
         return False
 
 
+def ensure_sponsored_products_table(cur):
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sponsored_products (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT NOT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_sponsored_product (product_id)
+            )
+            """
+        )
+        return True
+    except Exception:
+        return False
+
+
+def get_sponsored_products(conn, limit: int = 8):
+    products = []
+    try:
+        with conn.cursor() as cur:
+            if not ensure_sponsored_products_table(cur):
+                return products
+            conn.commit()
+            cur.execute(
+                """
+                SELECT p.*
+                FROM sponsored_products s
+                JOIN products p ON p.product_id = s.product_id
+                WHERE s.is_active = 1
+                ORDER BY s.id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            products = cur.fetchall() or []
+    except Exception:
+        return products
+    return products
+
 def format_duration(seconds):
     try:
         seconds = int(seconds or 0)
@@ -1105,6 +1146,8 @@ def home():
     cursor.execute(sql5)
     new_products = cursor.fetchall()
 
+    sponsored_products = get_sponsored_products(connection, limit=8)
+
     flash_state = get_flash_sale_state(connection)
     flash_sales = flash_state["items"]
     flash_sale_active = flash_state["active"]
@@ -1113,7 +1156,7 @@ def home():
     flash_sale_duration_seconds = flash_state["duration_seconds"]
 
     rating_ids = []
-    for group in (watches, ladies, jersey, foam, new_products, flash_sales):
+    for group in (watches, ladies, jersey, foam, new_products, sponsored_products, flash_sales):
         rating_ids.extend([_row_at(row, 0) for row in group] if group else [])
     ratings = get_ratings_for_products(connection, rating_ids)
 
@@ -1131,6 +1174,7 @@ def home():
         flash_sale_seconds=flash_sale_seconds,
         flash_sale_time_label=flash_sale_time_label,
         flash_sale_duration_seconds=flash_sale_duration_seconds,
+        sponsored_products=sponsored_products,
         ratings=ratings,
     )
 
@@ -3496,6 +3540,66 @@ def admin_flash_sale():
         flash_duration_minutes=flash_duration_minutes,
         flash_selected_ids=flash_selected_ids,
         flash_products=flash_products,
+    )
+
+
+@app.route("/admin/sponsored-products", methods=["GET", "POST"])
+@admin_required
+def admin_sponsored_products():
+    if request.method == "POST":
+        selected_ids = []
+        for raw in request.form.getlist("sponsored_products"):
+            try:
+                selected_ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        if selected_ids:
+            selected_ids = sorted(set(selected_ids))
+
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                if not ensure_sponsored_products_table(cur):
+                    return redirect(url_for("admin_dashboard"))
+                cur.execute("DELETE FROM sponsored_products")
+                if selected_ids:
+                    cur.executemany(
+                        "INSERT INTO sponsored_products (product_id, is_active) VALUES (%s, 1)",
+                        [(pid,) for pid in selected_ids],
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+
+        return redirect(url_for("admin_sponsored_products"))
+
+    conn = get_db_connection()
+    selected_ids = []
+    products = []
+    try:
+        with conn.cursor() as cur:
+            if ensure_sponsored_products_table(cur):
+                conn.commit()
+                cur.execute(
+                    "SELECT product_id FROM sponsored_products WHERE is_active = 1"
+                )
+                selected_ids = [int(_row_at(row, 0, 0)) for row in cur.fetchall() or []]
+                cur.execute(
+                    """
+                    SELECT product_id, product_name, category, price, stock, image_url
+                    FROM products
+                    ORDER BY product_id DESC
+                    LIMIT 80
+                    """
+                )
+                products = cur.fetchall() or []
+    finally:
+        conn.close()
+
+    return render_template(
+        "admin_sponsored_products.html",
+        sponsored_products=products,
+        sponsored_selected_ids=selected_ids,
     )
 
 

@@ -229,10 +229,6 @@
                   {% endif %}
                   <div class="d-flex gap-2 mt-auto">
                     <a href="/single_item/{{ item[0] }}" class="btn btn-sm btn-outline-primary">View</a>
-                    <form method="POST" action="/add_to_cart/{{ item[0] }}">
-                      <input type="hidden" name="qty" value="1">
-                      <button class="btn btn-sm btn-success" type="submit">Add to Cart</button>
-                    </form>
                   </div>
                 </div>
               </div>
