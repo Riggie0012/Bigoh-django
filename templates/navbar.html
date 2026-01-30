@@ -8,6 +8,8 @@
         --zen-muted: #6b7280;
         --zen-border: #e5e7eb;
         --zen-surface: #ffffff;
+        --zen-topbar-height: 24px;
+        --zen-nav-height: 84px;
       }
 
       body { font-family: "Sora", sans-serif; }
@@ -17,8 +19,10 @@
         color: #e5e7eb;
         font-size: 10px;
         padding: 2px 0;
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 0;
+        right: 0;
         z-index: 1600;
       }
       .zen-topbar a {
@@ -31,8 +35,10 @@
         background: rgba(255, 255, 255, 0.92);
         border-bottom: 1px solid var(--zen-border);
         backdrop-filter: blur(12px);
-        position: sticky;
-        top: 24px;
+        position: fixed;
+        top: var(--zen-topbar-height);
+        left: 0;
+        right: 0;
         z-index: 1500;
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
       }
@@ -167,7 +173,7 @@
         font-weight: 600;
         position: relative;
       }
-      .zen-cart-icon { width: 22px; height: 22px; }
+      .zen-cart-icon { width: 26px; height: 26px; }
       .zen-user { font-size: 11px; color: var(--zen-muted); }
       .zen-link { color: var(--zen-text); text-decoration: none; font-weight: 600; }
       .zen-link:hover { color: var(--zen-accent); }
@@ -191,6 +197,12 @@
       .cat-trigger:focus {
         background: #cc2f2b;
         color: #fff !important;
+      }
+      .zen-nav-spacer {
+        height: calc(var(--zen-topbar-height) + var(--zen-nav-height));
+      }
+      @media (max-width: 991px) {
+        :root { --zen-nav-height: 120px; }
       }
       .category-mega {
         width: 920px;
@@ -441,6 +453,7 @@
       </div>
     </div>
   </div>
+  <div class="zen-nav-spacer"></div>
 
   <section class="row">
     <div class="col-md-12">
