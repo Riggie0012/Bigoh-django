@@ -571,6 +571,16 @@ def send_login_notifications(user_name, user_email, user_phone):
             pass
 
 
+def send_signup_confirmation(user_name, user_email):
+    if not user_email or not validate_email_format(user_email):
+        return
+    try:
+        subject, text_body, html_body = mailer.build_signup_email(user_name, BUSINESS_NAME)
+        mailer.send_email(user_email, subject, text_body, html_body)
+    except Exception:
+        pass
+
+
 def validate_password_strength(password):
     if password is None:
         return "Password is required."
@@ -1714,6 +1724,7 @@ def signup():
                 connection.close()
                 return render_template('signup.html', error='Signup failed. Please try again.')
 
+            send_signup_confirmation(username, email)
             try:
                 if validate_phone_number(phone):
                     send_phone_otp_sms(phone, phone_otp)
@@ -1739,7 +1750,14 @@ def signup():
         
     else:
         _remember_next_url()
-        return render_template('signup.html', next_url=session.get("next_url", ""))
+        prefill_email = (request.args.get("email") or "").strip().lower()
+        prefill_name = (request.args.get("name") or "").strip()
+        return render_template(
+            'signup.html',
+            next_url=session.get("next_url", ""),
+            prefill_email=prefill_email,
+            prefill_name=prefill_name,
+        )
     
 
 @app.route('/verify-email', methods=['GET'])
@@ -2038,7 +2056,11 @@ def login_google():
         return redirect(url_for("signin"))
 
     remember_me = request.args.get("remember") == "1"
+    intent = (request.args.get("intent") or "signin").strip().lower()
+    if intent not in {"signin", "signup"}:
+        intent = "signin"
     session["google_remember_me"] = remember_me
+    session["google_intent"] = intent
     _remember_next_url()
     redirect_uri = url_for("auth_google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
@@ -2071,7 +2093,9 @@ def auth_google_callback():
         set_site_message("Google account email is invalid.", "danger")
         return redirect(url_for("signin"))
 
+    intent = session.pop("google_intent", "signin")
     connection = get_db_connection()
+    created_new = False
     try:
         ensure_user_verification_schema(connection)
         with connection.cursor() as cur:
@@ -2085,6 +2109,11 @@ def auth_google_callback():
                 username = _row_at(row, 1, display_name)
                 phone = _row_at(row, 3, "") or ""
             else:
+                if intent != "signup":
+                    set_site_message("No account found for that Google email. Please sign up first.", "warning")
+                    params = {"email": email, "name": display_name}
+                    return redirect(url_for("signup", **params))
+
                 username = _unique_username_from_email(connection, email)
                 password_hash = generate_password_hash(_random_password())
                 if users_has_is_admin():
@@ -2120,12 +2149,16 @@ def auth_google_callback():
                     )
                 user_id = cur.lastrowid
                 phone = ""
+                created_new = True
             connection.commit()
     except Exception:
         set_site_message("Unable to complete Google sign-in.", "danger")
         return redirect(url_for("signin"))
     finally:
         connection.close()
+
+    if created_new:
+        send_signup_confirmation(username, email)
 
     # Always skip phone verification for Google accounts.
     try:
@@ -4274,4 +4307,3 @@ def whoami():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     app.run(host="0.0.0.0", port=port)
-

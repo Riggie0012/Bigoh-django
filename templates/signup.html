@@ -143,6 +143,7 @@
                          <input type="hidden" name="next" value="{{ next_url or '' }}">
                          <div class="mb-2">
                              <input type="text" name="username" placeholder="Your Username"
+                             value="{{ prefill_name or '' }}"
                              class="form-control {% if error_field in ['username','both'] %}is-invalid{% endif %}" required>
                              <div class="form-text">Username must be unique.</div>
                              {% if error_field in ['username','both'] %}
@@ -152,6 +153,7 @@
 
                          <div class="mb-2">
                              <input type="email" name="email" placeholder="Your Email" required
+                             value="{{ prefill_email or '' }}"
                              class="form-control {% if error_field in ['email','both'] %}is-invalid{% endif %}">
                              <div class="form-text">Use an email that hasn't been registered.</div>
                              {% if error_field in ['email','both'] %}
@@ -221,7 +223,7 @@
                      <div class="text-center my-3 text-muted small">Or sign up with</div>
                      <div class="row g-2">
                        <div class="col-12">
-                         <a class="btn btn-outline-dark w-100" href="/login/google?remember=1">
+                         <a class="btn btn-outline-dark w-100" href="/login/google?intent=signup&remember=1">
                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px; height:18px; margin-right:8px; vertical-align:-3px;">
                            Google
                          </a>

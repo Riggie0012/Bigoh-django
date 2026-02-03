@@ -229,7 +229,7 @@
             if (!googleBtn) return;
             googleBtn.addEventListener("click", function () {
                 var rememberOn = remember && remember.checked ? "1" : "0";
-                window.location.href = "/login/google?remember=" + rememberOn;
+                window.location.href = "/login/google?intent=signin&remember=" + rememberOn;
             });
         })();
         (function () {
