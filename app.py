@@ -37,7 +37,7 @@ if not app.secret_key:
     raise RuntimeError("FLASK_SECRET_KEY is required.")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "+254752370545")
 ADMIN_USERS = {
-    name.strip()
+    name.strip().lower()
     for name in os.getenv("ADMIN_USERS", "").split(",")
     if name.strip()
 }
@@ -602,6 +602,23 @@ def get_user_is_admin(user_id) -> bool:
             conn.close()
         except Exception:
             pass
+
+
+def _fetch_user_email(cur, user_id, fallback: str = "") -> str:
+    if not user_id:
+        return fallback or ""
+    try:
+        cur.execute("SELECT email FROM users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        return str(_row_at(row, 0, fallback or "") or fallback or "")
+    except Exception:
+        return fallback or ""
+
+
+def is_admin_identity(user_id, email: str = "") -> bool:
+    if email and _normalize_user_name(email) in ADMIN_USERS:
+        return True
+    return get_user_is_admin(user_id)
 
 
 def send_login_notifications(user_name, user_email, user_phone):
@@ -2276,7 +2293,7 @@ def auth_google_callback():
     session["key"] = username
     session["username"] = user_id
     session["remember_me"] = remember_me
-    session["is_admin"] = get_user_is_admin(user_id)
+    session["is_admin"] = is_admin_identity(user_id, email)
     session.pop("pending_user_id", None)
 
     return redirect(next_url or url_for("home"))
@@ -2345,6 +2362,7 @@ def signin():
             user_name = user[1]
             user_email = user[3] if len(user) > 3 else None
             user_phone = user[4] if len(user) > 4 else None
+            user_email = _fetch_user_email(cursor, user_id, user_email or "")
 
             connection.close()
             session.clear()
@@ -2354,10 +2372,7 @@ def signin():
             session['username'] = user_id
             session['remember_me'] = remember_me
 
-            if has_admin_col:
-                session["is_admin"] = bool(user[5])
-            else:
-                session["is_admin"] = False
+            session["is_admin"] = is_admin_identity(user_id, user_email or "")
 
             send_login_notifications(user_name, user_email, user_phone)
 
