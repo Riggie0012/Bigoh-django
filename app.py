@@ -3340,6 +3340,8 @@ def categories():
         {"name": "Ladies Watch", "slug": "ladies-watch", "image": "3ladies1.jpg"},
         {"name": "Jersey", "slug": "jersey", "image": "jersey1.jpg"},
         {"name": "Cleaning", "slug": "cleaning", "image": "foam1.jpeg"},
+        {"name": "Shoes", "slug": "shoes", "image": "hero.jpg"},
+        {"name": "Electricals", "slug": "electricals", "image": "ledtouch.jpg"},
     ]
     return render_template("categories.html", categories=categories_list)
 
@@ -3436,6 +3438,56 @@ def category_cleaning():
         conn.close()
     return render_template(
         "category_cleaning.html",
+        products=products,
+        ratings=ratings,
+        brands=brands,
+        colors=colors,
+        filters=filters,
+    )
+
+
+@app.route("/category/shoes")
+def category_shoes():
+    filters = {
+        "brand": request.args.get("brand", "").strip(),
+        "color": request.args.get("color", "").strip(),
+        "min_price": request.args.get("min_price", "").strip(),
+        "max_price": request.args.get("max_price", "").strip(),
+        "availability": request.args.get("availability", "").strip(),
+    }
+    products, brands, colors = get_products_by_category("Shoes", filters)
+    conn = get_db_connection()
+    try:
+        ratings = get_ratings_for_products(conn, [_row_at(row, 0) for row in products])
+    finally:
+        conn.close()
+    return render_template(
+        "category_shoes.html",
+        products=products,
+        ratings=ratings,
+        brands=brands,
+        colors=colors,
+        filters=filters,
+    )
+
+
+@app.route("/category/electricals")
+def category_electricals():
+    filters = {
+        "brand": request.args.get("brand", "").strip(),
+        "color": request.args.get("color", "").strip(),
+        "min_price": request.args.get("min_price", "").strip(),
+        "max_price": request.args.get("max_price", "").strip(),
+        "availability": request.args.get("availability", "").strip(),
+    }
+    products, brands, colors = get_products_by_category("Electricals", filters)
+    conn = get_db_connection()
+    try:
+        ratings = get_ratings_for_products(conn, [_row_at(row, 0) for row in products])
+    finally:
+        conn.close()
+    return render_template(
+        "category_electricals.html",
         products=products,
         ratings=ratings,
         brands=brands,

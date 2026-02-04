@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Electricals | Bigoh{% endblock %}
+{% block extra_head %}
+<style>
+    .category-hero {
+      margin-top: 12px;
+    }
+    .product-grid-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .product-grid-card img {
+      width: 100%;
+      height: 210px;
+      object-fit: cover;
+      background: #f1f5f9;
+    }
+    .product-grid-card .quality-check {
+      font-size: 12px;
+      color: #16a34a;
+      margin: 6px 0;
+    }
+    .product-grid-card .btn-outline-primary {
+      border-radius: 999px;
+      border-color: #0f172a;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .product-grid-card .btn-outline-primary:hover {
+      background: #0f172a;
+      color: #fff;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container py-3">
+    
+
+    <div class="hero-banner category-hero" style="background-image:url('{{ url_for('static', filename='images/ledtouch.jpg') }}'); background-size:cover; background-position:center;">
+      <div class="hero-badge"><i class="fa-solid fa-plug"></i> Electricals</div>
+      <div class="hero-title">Smart essentials for modern living.</div>
+      <div class="hero-subtitle">Practical gadgets, verified reviews, fast delivery.</div>
+    </div>
+
+    <form method="GET" class="row g-2 align-items-end mt-3">
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label small text-muted">Brand</label>
+        <select name="brand" class="form-select">
+          <option value="">All brands</option>
+          {% for b in brands %}
+          <option value="{{ b }}" {% if filters.brand == b %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-2">
+        <label class="form-label small text-muted">Color</label>
+        <select name="color" class="form-select">
+          <option value="">All colors</option>
+          {% for c in colors %}
+          <option value="{{ c }}" {% if filters.color == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-2">
+        <label class="form-label small text-muted">Availability</label>
+        <select name="availability" class="form-select">
+          <option value="">All</option>
+          <option value="in_stock" {% if filters.availability == "in_stock" %}selected{% endif %}>In stock</option>
+        </select>
+      </div>
+      <div class="col-sm-6 col-md-2">
+        <label class="form-label small text-muted">Min price</label>
+        <input type="number" name="min_price" step="0.01" class="form-control" value="{{ filters.min_price }}">
+      </div>
+      <div class="col-sm-6 col-md-2">
+        <label class="form-label small text-muted">Max price</label>
+        <input type="number" name="max_price" step="0.01" class="form-control" value="{{ filters.max_price }}">
+      </div>
+      <div class="col-12 col-md-1 d-grid">
+        <button class="btn btn-dark">Apply</button>
+      </div>
+      <div class="col-12 col-md-2 d-grid">
+        <a class="btn btn-outline-secondary" href="/category/electricals">Reset</a>
+      </div>
+    </form>
+
+    <div class="row g-3 mt-3">
+      {% if products %}
+        {% for item in products %}
+        <div class="col-md-3 col-sm-6">
+          <div class="product-grid-card">
+            
+            <img src="{{ image_url(item[7]) }}" alt="{{ item[1] }}" loading="lazy" decoding="async">
+            <div class="p-3">
+              <div class="fw-semibold">{{ item[1] }}</div>
+              <div class="text-danger mb-1">KES {{ item[4] }}</div>
+              <div class="quality-check"><i class="fa-solid fa-circle-check"></i> Quality checked</div>
+              {% set rating = ratings.get(item[0]) if ratings is defined else None %}
+              {% if rating and rating.count > 0 %}
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-warning">
+                  {% for i in range(1, 6) %}
+                    {% if i <= (rating.avg|round(0, 'common')|int) %}&#9733;{% else %}&#9734;{% endif %}
+                  {% endfor %}
+                </span>
+                <span class="text-muted small">{{ rating.avg }}/5</span>
+                <span class="text-muted small">({{ rating.count }})</span>
+</div>
+              {% else %}
+              <div class="text-muted small mb-2"><a href="/single_item/{{ item[0] }}#reviews">Be the first to review</a></div>
+              {% endif %}
+              {% if item[5] is not none and item[5]|int <= 5 %}
+              <div class="text-danger small mb-2">Low stock: {{ item[5] }} left</div>
+              {% endif %}
+              <div class="d-flex gap-2">
+                <a href="/single_item/{{ item[0] }}" class="btn btn-sm btn-outline-primary">View</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted">No products found in this category.</p>
+      {% endif %}
+    </div>
+
+    <div class="mt-4">
+      
+    </div>
+  </div>
+{% endblock %}
