@@ -129,11 +129,14 @@
     border-radius: 999px;
     padding: 4px 10px;
     font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .zen-footer__payments--inline {
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .zen-footer__payments--inline .zen-footer__badge {
@@ -206,7 +209,10 @@
         <div>Quality-checked products, responsive support, and smooth checkout.</div>
         <div class="zen-footer__payments zen-footer__payments--inline mt-3">
           {% for pm in payment_methods %}
-          <span class="zen-footer__badge">{{ pm.label }}</span>
+          <span class="zen-footer__badge">
+            {% if pm.icon %}<i class="{{ pm.icon }}"></i>{% endif %}
+            {{ pm.label }}
+          </span>
           {% endfor %}
           <span class="zen-footer__badge">Pay on Delivery</span>
           <span class="zen-footer__badge">SSL Secure</span>
