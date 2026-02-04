@@ -101,6 +101,23 @@
             <div class="text-muted">Subtotal</div>
             <div class="fw-bold text-danger">KES {{ "%.2f"|format(grand_total) }}</div>
           </div>
+          {% if discount and discount > 0 %}
+          <div class="d-flex justify-content-between mt-2">
+            <div class="text-muted">Loyalty Discount</div>
+            <div class="fw-bold text-success">-KES {{ "%.2f"|format(discount) }}</div>
+          </div>
+          {% if discount_reason %}
+          <div class="text-muted small mt-1">{{ discount_reason }}</div>
+          {% endif %}
+          {% elif session.get("username") and loyalty_discount_pct and loyalty_repeat_min %}
+          <div class="text-muted small mt-2">
+            Earn {{ loyalty_discount_pct|int }}% off after {{ loyalty_repeat_min }} completed orders.
+          </div>
+          {% endif %}
+          <div class="d-flex justify-content-between mt-2">
+            <div class="text-muted">Total</div>
+            <div class="fw-bold text-danger">KES {{ "%.2f"|format(total_after_discount) }}</div>
+          </div>
 
           <div class="trust-strip mt-3">
             <span><i class="fa-solid fa-lock"></i> Secure checkout (SSL)</span>
@@ -108,9 +125,12 @@
             <span><i class="fa-solid fa-shield-halved"></i> Dispute support</span>
           </div>
           <div class="payment-badges mt-2">
-            <span><i class="fa-solid fa-money-bill-wave"></i> M-Pesa</span>
-            <span><i class="fa-brands fa-cc-visa"></i> Visa</span>
-            <span><i class="fa-brands fa-cc-mastercard"></i> Mastercard</span>
+            {% for pm in payment_methods %}
+            <span>
+              {% if pm.icon %}<i class="{{ pm.icon }}"></i>{% endif %}
+              {{ pm.label }}
+            </span>
+            {% endfor %}
             <span><i class="fa-solid fa-shield-check"></i> SSL Secure</span>
             <span><i class="fa-solid fa-truck"></i> Pay on Delivery</span>
           </div>

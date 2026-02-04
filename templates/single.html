@@ -306,9 +306,17 @@
           <div class="text-muted small mb-3">Pay on delivery or add to cart for checkout.</div>
 
           <form method="POST" action="/add_to_cart/{{ product[0] }}" class="d-flex align-items-center gap-2 mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="number" name="qty" value="1" min="1" class="form-control" style="width:120px;">
             <button class="btn btn-success flex-grow-1">Add to Cart</button>
           </form>
+          {% if product[5] is not none and product[5]|int <= 0 %}
+          <form method="POST" action="/product/{{ product[0] }}/stock-alert" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="email" name="email" class="form-control" placeholder="Your email for restock alerts" required style="width:220px;">
+            <button class="btn btn-outline-dark">Notify me</button>
+          </form>
+          {% endif %}
 
           {% if request.args.get('err') == 'location' %}
           <div class="alert alert-danger py-2">Please enter delivery location.</div>

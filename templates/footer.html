@@ -205,8 +205,9 @@
         <div class="zen-footer__title">Store Promise</div>
         <div>Quality-checked products, responsive support, and smooth checkout.</div>
         <div class="zen-footer__payments zen-footer__payments--inline mt-3">
-          <span class="zen-footer__badge">M-Pesa</span>
-          <span class="zen-footer__badge">Card</span>
+          {% for pm in payment_methods %}
+          <span class="zen-footer__badge">{{ pm.label }}</span>
+          {% endfor %}
           <span class="zen-footer__badge">Pay on Delivery</span>
           <span class="zen-footer__badge">SSL Secure</span>
         </div>

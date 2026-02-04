@@ -58,6 +58,19 @@ SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "0759 808 915")
 SUPPORT_WHATSAPP = os.getenv("SUPPORT_WHATSAPP", "254759808915")
 SUPPORT_HOURS = os.getenv("SUPPORT_HOURS", "Daily 8:00am - 8:00pm EAT")
 STATIC_CDN_BASE = os.getenv("STATIC_CDN_BASE", "").strip()
+LOYALTY_ENABLED = os.getenv("LOYALTY_ENABLED", "1") == "1"
+LOYALTY_REPEAT_ORDERS_MIN = int(os.getenv("LOYALTY_REPEAT_ORDERS_MIN", "2"))
+LOYALTY_REPEAT_DISCOUNT_PCT = float(os.getenv("LOYALTY_REPEAT_DISCOUNT_PCT", "5"))
+PAYMENT_METHODS = [
+    {"label": "M-Pesa", "icon": "fa-solid fa-money-bill-wave"},
+    {"label": "Visa", "icon": "fa-brands fa-cc-visa"},
+    {"label": "Mastercard", "icon": "fa-brands fa-cc-mastercard"},
+    {"label": "Airtel Money", "icon": "fa-solid fa-sim-card"},
+    {"label": "T-Kash", "icon": "fa-solid fa-mobile-screen"},
+    {"label": "PayPal", "icon": "fa-brands fa-paypal"},
+    {"label": "Apple Pay", "icon": "fa-brands fa-apple-pay"},
+    {"label": "Google Pay", "icon": "fa-brands fa-google-pay"},
+]
 LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", "5"))
 LOW_STOCK_ALERT_INTERVAL_HOURS = int(os.getenv("LOW_STOCK_ALERT_INTERVAL_HOURS", "24"))
 LOW_STOCK_EMAIL_TO = os.getenv("LOW_STOCK_EMAIL_TO", "") or SUPPORT_EMAIL_ADMIN
@@ -503,6 +516,32 @@ def _scalar(cur, query, params=None, default=0):
         return default if value is None else value
     except Exception:
         return default
+
+
+def get_loyalty_discount(conn, user_id: int, subtotal: float):
+    if not LOYALTY_ENABLED or not user_id or subtotal <= 0:
+        return 0.0, "", 0
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM orders
+                WHERE user_id = %s
+                  AND status IN ('COMPLETED', 'DELIVERED')
+                """,
+                (user_id,),
+            )
+            count = int(_row_at(cur.fetchone(), 0, 0) or 0)
+    except Exception:
+        return 0.0, "", 0
+
+    if count < LOYALTY_REPEAT_ORDERS_MIN or LOYALTY_REPEAT_DISCOUNT_PCT <= 0:
+        return 0.0, "", count
+
+    discount = round(subtotal * (LOYALTY_REPEAT_DISCOUNT_PCT / 100.0), 2)
+    reason = f"Loyalty {LOYALTY_REPEAT_DISCOUNT_PCT:.0f}% (repeat customer)"
+    return discount, reason, count
 
 def admin_required(view):
     @wraps(view)
@@ -1031,6 +1070,54 @@ def orders_has_reference():
         conn.close()
 
 
+def orders_has_discount():
+    cached = app.config.get("ORDERS_HAS_DISCOUNT")
+    if cached is not None:
+        return cached
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'orders'
+                  AND COLUMN_NAME = 'discount'
+                """
+            )
+            row = cur.fetchone()
+            has_col = bool(row and _row_at(row, 0, 0) > 0)
+            app.config["ORDERS_HAS_DISCOUNT"] = has_col
+            return has_col
+    except Exception:
+        app.config["ORDERS_HAS_DISCOUNT"] = False
+        return False
+    finally:
+        conn.close()
+
+
+def ensure_orders_schema(conn) -> bool:
+    try:
+        with conn.cursor() as cur:
+            if not table_has_column(conn, "orders", "discount"):
+                cur.execute(
+                    "ALTER TABLE orders ADD COLUMN discount DECIMAL(10,2) NOT NULL DEFAULT 0"
+                )
+                app.config[_schema_cache_key("orders", "discount")] = True
+                app.config["ORDERS_HAS_DISCOUNT"] = True
+            if not table_has_column(conn, "orders", "discount_reason"):
+                cur.execute(
+                    "ALTER TABLE orders ADD COLUMN discount_reason VARCHAR(120) NULL"
+                )
+                app.config[_schema_cache_key("orders", "discount_reason")] = True
+        conn.commit()
+        return True
+    except Exception:
+        return False
+
+
 def ensure_reviews_table(cur):
     try:
         cur.execute(
@@ -1321,6 +1408,27 @@ def ensure_stock_alerts_table(cur):
         return False
 
 
+def ensure_back_in_stock_alerts_table(cur):
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS back_in_stock_alerts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                notified_at DATETIME NULL,
+                UNIQUE KEY uniq_back_in_stock (product_id, email),
+                INDEX (product_id),
+                INDEX (notified_at)
+            )
+            """
+        )
+        return True
+    except Exception:
+        return False
+
+
 def ensure_active_sessions_table(cur):
     try:
         cur.execute(
@@ -1425,6 +1533,56 @@ def send_low_stock_alerts(conn, items):
                     (pid, now),
                 )
             conn.commit()
+    except Exception:
+        return
+
+
+def send_back_in_stock_alerts(conn, product_id: int, product_name: str):
+    try:
+        with conn.cursor() as cur:
+            if not ensure_back_in_stock_alerts_table(cur):
+                return
+            conn.commit()
+
+            cur.execute(
+                """
+                SELECT id, email
+                FROM back_in_stock_alerts
+                WHERE product_id = %s AND notified_at IS NULL
+                """,
+                (product_id,),
+            )
+            rows = cur.fetchall() or []
+            if not rows:
+                return
+
+            link = url_for("single", product_id=product_id, _external=True)
+            subject = f"{product_name} is back in stock"
+            text_body = (
+                f"Good news!\n\n{product_name} is back in stock.\n"
+                f"View item: {link}\n\n"
+                f"- {BUSINESS_NAME}"
+            )
+            html_body = (
+                f"<p>Good news!</p><p><strong>{product_name}</strong> is back in stock.</p>"
+                f"<p><a href=\"{link}\">View item</a></p>"
+            )
+
+            sent_ids = []
+            for row in rows:
+                alert_id = row[0]
+                email = row[1]
+                ok = mailer.send_email(email, subject, text_body, html_body)
+                if ok:
+                    sent_ids.append(alert_id)
+
+            if sent_ids:
+                placeholders = ", ".join(["%s"] * len(sent_ids))
+                cur.execute(
+                    f"UPDATE back_in_stock_alerts SET notified_at=NOW() WHERE id IN ({placeholders})",
+                    tuple(sent_ids),
+                )
+                conn.commit()
     except Exception:
         return
 
@@ -1553,6 +1711,7 @@ def cart_count():
         support_whatsapp=SUPPORT_WHATSAPP,
         support_hours=SUPPORT_HOURS,
         brand_partners=BRAND_PARTNERS,
+        payment_methods=PAYMENT_METHODS,
     )
 
 
@@ -1692,6 +1851,53 @@ def single(product_id):
         rating_breakdown=rating_breakdown,
         can_review=can_review,
     )
+
+
+@app.route("/product/<int:product_id>/stock-alert", methods=["POST"])
+def back_in_stock_alert(product_id):
+    email = request.form.get("email", "").strip()
+    if not email and session.get("username"):
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                email = _fetch_user_email(cur, session.get("username"), "")
+        finally:
+            conn.close()
+
+    if not validate_email_format(email):
+        set_site_message("Please enter a valid email for restock alerts.", "warning")
+        return redirect(url_for("single", product_id=product_id))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT product_id, product_name, stock FROM products WHERE product_id=%s", (product_id,))
+            row = cur.fetchone()
+            if not row:
+                set_site_message("Product not found.", "warning")
+                return redirect(url_for("home"))
+            stock = int(_row_at(row, 2, 0) or 0)
+            if stock > 0:
+                set_site_message("This item is already in stock.", "info")
+                return redirect(url_for("single", product_id=product_id))
+
+            if not ensure_back_in_stock_alerts_table(cur):
+                set_site_message("Unable to save alert right now.", "danger")
+                return redirect(url_for("single", product_id=product_id))
+
+            cur.execute(
+                """
+                INSERT IGNORE INTO back_in_stock_alerts (product_id, email)
+                VALUES (%s, %s)
+                """,
+                (product_id, email),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    set_site_message("We will email you once this item is back in stock.", "success")
+    return redirect(url_for("single", product_id=product_id))
 
 
 @app.route("/product/<int:product_id>/review", methods=["POST"])
@@ -3446,7 +3652,30 @@ def cart():
             "total": total
         })
 
-    return render_template("cart.html", items=items, grand_total=grand_total)
+    discount = 0.0
+    discount_reason = ""
+    repeat_count = 0
+    if session.get("username"):
+        conn = get_db_connection()
+        try:
+            discount, discount_reason, repeat_count = get_loyalty_discount(
+                conn, session.get("username"), grand_total
+            )
+        finally:
+            conn.close()
+    total_after_discount = max(0.0, grand_total - discount)
+
+    return render_template(
+        "cart.html",
+        items=items,
+        grand_total=grand_total,
+        discount=discount,
+        discount_reason=discount_reason,
+        repeat_count=repeat_count,
+        total_after_discount=total_after_discount,
+        loyalty_repeat_min=LOYALTY_REPEAT_ORDERS_MIN,
+        loyalty_discount_pct=LOYALTY_REPEAT_DISCOUNT_PCT,
+    )
 
 
 @app.route("/update_cart/<int:product_id>", methods=["POST"])
@@ -3626,11 +3855,26 @@ def pay_on_delivery():
         conn.close()
         return redirect(request.referrer or url_for("home"))
 
+    ensure_orders_schema(conn)
+    discount = 0.0
+    discount_reason = ""
+    discount, discount_reason, _ = get_loyalty_discount(conn, user_id, subtotal)
+    total_after_discount = max(0.0, subtotal - discount)
+
     # 6) Store order in DB
-    cur.execute(
-        "INSERT INTO orders (user_id, location, payment_method, status, subtotal) VALUES (%s, %s, %s, %s, %s)",
-        (user_id, location, "PAY_ON_DELIVERY", "PENDING", subtotal)
-    )
+    if orders_has_discount():
+        cur.execute(
+            """
+            INSERT INTO orders (user_id, location, payment_method, status, subtotal, discount, discount_reason)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (user_id, location, "PAY_ON_DELIVERY", "PENDING", total_after_discount, discount, discount_reason),
+        )
+    else:
+        cur.execute(
+            "INSERT INTO orders (user_id, location, payment_method, status, subtotal) VALUES (%s, %s, %s, %s, %s)",
+            (user_id, location, "PAY_ON_DELIVERY", "PENDING", total_after_discount),
+        )
     order_id = cur.lastrowid
     order_reference = None
     if orders_has_reference():
@@ -3678,6 +3922,11 @@ def pay_on_delivery():
 
     lines.append("")
     lines.append(f"SUBTOTAL: KES {subtotal:,.2f}")
+    if discount > 0:
+        lines.append(f"LOYALTY DISCOUNT: -KES {discount:,.2f}")
+        if discount_reason:
+            lines.append(f"DISCOUNT NOTE: {discount_reason}")
+    lines.append(f"TOTAL: KES {total_after_discount:,.2f}")
     lines.append("")
     lines.append("Kindly send me payment details for my orders.")
     lines.append("Thank you.")
@@ -3781,26 +4030,24 @@ def order_confirmation(order_id):
         return redirect(url_for("signin"))
 
     conn = get_db_connection()
+    has_ref = orders_has_reference()
+    has_discount = orders_has_discount()
     try:
         with conn.cursor() as cur:
-            if orders_has_reference():
-                cur.execute(
-                    """
-                    SELECT order_id, user_id, location, payment_method, status, subtotal, order_reference
-                    FROM orders
-                    WHERE order_id = %s
-                    """,
-                    (order_id,),
-                )
-            else:
-                cur.execute(
-                    """
-                    SELECT order_id, user_id, location, payment_method, status, subtotal
-                    FROM orders
-                    WHERE order_id = %s
-                    """,
-                    (order_id,),
-                )
+            cols = ["order_id", "user_id", "location", "payment_method", "status", "subtotal"]
+            if has_discount:
+                cols.extend(["discount", "discount_reason"])
+            if has_ref:
+                cols.append("order_reference")
+
+            cur.execute(
+                f"""
+                SELECT {", ".join(cols)}
+                FROM orders
+                WHERE order_id = %s
+                """,
+                (order_id,),
+            )
             order = cur.fetchone()
 
             if not order or order[1] != session.get("username"):
@@ -3819,8 +4066,17 @@ def order_confirmation(order_id):
         conn.close()
 
     reference = f"ZC-{order_id:06d}"
-    if order and len(order) > 6 and order[6]:
-        reference = order[6]
+    if order and has_ref:
+        ref_idx = len(order) - 1
+        if order[ref_idx]:
+            reference = order[ref_idx]
+
+    discount = 0.0
+    discount_reason = ""
+    if order and has_discount:
+        discount_idx = 6
+        discount = float(_row_at(order, discount_idx, 0) or 0)
+        discount_reason = _row_at(order, discount_idx + 1, "")
     wa_url = session.get("last_wa_url")
     return render_template(
         "order_confirmation.html",
@@ -3828,6 +4084,8 @@ def order_confirmation(order_id):
         items=items,
         reference=reference,
         wa_url=wa_url,
+        discount=discount,
+        discount_reason=discount_reason,
     )
 
 
@@ -4403,6 +4661,7 @@ def admin_edit_product(product_id):
                 description = request.form.get("description", "").strip()
 
                 image_url = product[7]
+                old_stock = int(_row_at(product, 5, 0) or 0)
                 file = request.files.get("image")
                 if file and file.filename:
                     if allowed_file(file.filename):
@@ -4438,6 +4697,12 @@ def admin_edit_product(product_id):
                         (product_name, category, brand, color, price, stock, description, image_url, product_id),
                     )
                 conn.commit()
+                try:
+                    new_stock = int(stock or 0)
+                except ValueError:
+                    new_stock = 0
+                if old_stock <= 0 and new_stock > 0:
+                    send_back_in_stock_alerts(conn, product_id, product_name)
                 return redirect(url_for("admin_products"))
     finally:
         conn.close()
