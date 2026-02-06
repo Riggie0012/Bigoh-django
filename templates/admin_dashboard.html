@@ -103,7 +103,7 @@
 
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 16px;
       margin-bottom: 20px;
     }
@@ -193,6 +193,7 @@
     .status-PENDING { background: rgba(244, 183, 64, 0.2); color: var(--yellow); }
     .status-PROCESSING { background: rgba(79, 140, 255, 0.2); color: var(--blue); }
     .status-COMPLETED { background: rgba(61, 220, 151, 0.2); color: var(--green); }
+    .status-DELIVERED { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
     .status-CANCELLED { background: rgba(248, 113, 113, 0.2); color: var(--red); }
 
     .chart-wrap {
@@ -462,6 +463,10 @@
               <span>Completed Orders</span>
               <span class="mono">{{ metrics.completed }}</span>
             </div>
+            <div class="mini-row">
+              <span>Delivered Orders</span>
+              <span class="mono">{{ metrics.delivered }}</span>
+            </div>
           </div>
         </div>
         <div class="panel compact">
@@ -537,8 +542,9 @@
                   </td>
                   <td>
                     <form method="POST" action="{{ url_for('admin_update_order_status', order_id=o[0]) }}" class="d-flex gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <select name="status" class="form-select form-select-sm bg-dark text-white border-0">
-                        {% for s in ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"] %}
+                        {% for s in ["PENDING", "PROCESSING", "COMPLETED", "DELIVERED", "CANCELLED"] %}
                           <option value="{{ s }}" {% if o[6] == s %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                       </select>
@@ -561,8 +567,9 @@
                   </td>
                   <td>
                     <form method="POST" action="{{ url_for('admin_update_order_status', order_id=o[0]) }}" class="d-flex gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <select name="status" class="form-select form-select-sm bg-dark text-white border-0">
-                        {% for s in ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"] %}
+                        {% for s in ["PENDING", "PROCESSING", "COMPLETED", "DELIVERED", "CANCELLED"] %}
                           <option value="{{ s }}" {% if o[5] == s %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                       </select>
@@ -606,7 +613,7 @@
           labels: statusLabels,
           datasets: [{
             data: statusValues,
-            backgroundColor: ["#f4b740", "#4f8cff", "#3ddc97", "#f87171"],
+            backgroundColor: ["#f4b740", "#4f8cff", "#3ddc97", "#22c55e", "#f87171"],
             borderWidth: 0
           }]
         },

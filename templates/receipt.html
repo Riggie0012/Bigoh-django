@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Receipt | {{ business_name }}{% endblock %}
+{% block extra_head %}
+<style>
+  .receipt-wrap {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .receipt-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+    border-bottom: 1px dashed #e5e7eb;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .receipt-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .meta-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .meta-value {
+    font-weight: 600;
+  }
+  .receipt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .totals {
+    max-width: 320px;
+    margin-left: auto;
+  }
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #ffffff !important; }
+    .receipt-wrap { border: none; padding: 0; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <div class="receipt-wrap">
+    <div class="receipt-header">
+      <div>
+        <h3 class="mb-1">{{ business_name }}</h3>
+        <div class="text-muted">{{ business_address }}</div>
+        {% if business_reg_no %}
+        <div class="text-muted">Reg: {{ business_reg_body }} {{ business_reg_no }}</div>
+        {% endif %}
+      </div>
+      <div class="text-end">
+        <h5 class="mb-1">Receipt</h5>
+        <div class="text-muted">Reference: {{ reference }}</div>
+        <div class="text-muted">Order ID: #{{ order[0] }}</div>
+      </div>
+    </div>
+
+    <div class="receipt-meta">
+      <div>
+        <div class="meta-label">Status</div>
+        <div class="meta-value">{{ order[4] }}</div>
+      </div>
+      <div>
+        <div class="meta-label">Payment</div>
+        <div class="meta-value">{{ order[3] }}</div>
+      </div>
+      <div>
+        <div class="meta-label">Delivery</div>
+        <div class="meta-value">{{ order[2] }}</div>
+      </div>
+      <div>
+        <div class="meta-label">Issued</div>
+        <div class="meta-value">{{ receipt_date.strftime("%b %d, %Y %I:%M %p") }}</div>
+      </div>
+      <div>
+        <div class="meta-label">Customer</div>
+        <div class="meta-value">{{ customer[0] }}</div>
+        {% if customer[1] %}<div class="text-muted small">{{ customer[1] }}</div>{% endif %}
+        {% if customer[2] %}<div class="text-muted small">{{ customer[2] }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="table-responsive mt-3">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Unit Price</th>
+            <th>Qty</th>
+            <th>Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td>{{ it[1] }}</td>
+            <td>KES {{ "{:,.2f}".format(it[2] or 0) }}</td>
+            <td>{{ it[3] }}</td>
+            <td class="text-danger">KES {{ "{:,.2f}".format(it[4] or 0) }}</td>
+          </tr>
+          {% endfor %}
+          {% if items|length == 0 %}
+          <tr>
+            <td colspan="4" class="text-center text-muted">No items found.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals">
+      <div class="totals-row">
+        <div>Subtotal</div>
+        <strong>KES {{ "{:,.2f}".format(items_total or 0) }}</strong>
+      </div>
+      {% if discount and discount > 0 %}
+      <div class="totals-row text-success">
+        <div>Discount</div>
+        <strong>-KES {{ "{:,.2f}".format(discount or 0) }}</strong>
+      </div>
+      {% if discount_reason %}
+      <div class="text-muted small mt-1">{{ discount_reason }}</div>
+      {% endif %}
+      {% endif %}
+      <div class="totals-row mt-2">
+        <div>Total</div>
+        <strong class="text-danger">KES {{ "{:,.2f}".format(order_total or 0) }}</strong>
+      </div>
+    </div>
+
+    <div class="mt-3 text-muted small">
+      Support: {{ support_phone }}{% if support_whatsapp %} (WhatsApp {{ support_whatsapp }}){% endif %}{% if support_email %} | {{ support_email }}{% endif %}
+    </div>
+  </div>
+
+  <div class="receipt-actions mt-3 no-print">
+    <a class="btn btn-outline-dark" href="{{ url_for('order_confirmation', order_id=order[0]) }}">Back to order</a>
+  </div>
+</div>
+{% endblock %}

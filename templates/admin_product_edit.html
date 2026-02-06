@@ -165,6 +165,7 @@
 
       <section class="panel">
         <form method="POST" enctype="multipart/form-data" class="row g-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="col-md-6">
             <label class="form-label">Product Name</label>
             <input type="text" name="product_name" class="form-control" value="{{ product[1] }}" required>

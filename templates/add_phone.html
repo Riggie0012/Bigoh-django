@@ -11,6 +11,7 @@
                 <div class="alert alert-danger">{{ error }}</div>
                 {% endif %}
                 <form action="/add-phone" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="tel" name="phone" placeholder="Your Phone"
                            class="form-control" required
                            pattern="\+?[0-9\s\-()]{10,20}"

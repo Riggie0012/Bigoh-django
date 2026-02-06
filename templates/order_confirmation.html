@@ -130,7 +130,23 @@
     </div>
 
     <div class="mt-4">
-      
+      <a class="btn btn-dark" href="{{ url_for('order_confirmation', order_id=order[0]) }}?print=1">Download / Print order details</a>
+      <div class="text-muted small mt-2">Final receipt will be sent by admin after confirmation.</div>
+      {% if session.get("is_admin") %}
+      <div class="mt-2">
+        <a class="btn btn-outline-dark" href="{{ url_for('order_receipt', order_id=order[0]) }}">View final receipt (admin)</a>
+      </div>
+      {% endif %}
     </div>
   </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("print") === "1") {
+      window.print();
+    }
+  })();
+</script>
 {% endblock %}

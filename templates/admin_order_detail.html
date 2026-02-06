@@ -155,7 +155,13 @@
           <h3 class="mb-1">Order #{{ order[0] }}</h3>
           <div class="text-muted">Review customer, delivery, and line items.</div>
         </div>
-        <a href="/admin/orders" class="btn btn-sm btn-outline-light">Back to Orders</a>
+        <div class="d-flex gap-2">
+          <form method="post" action="/admin/orders/{{ order[0] }}/send-receipt">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-warning" type="submit">Send Final Receipt</button>
+          </form>
+          <a href="/admin/orders" class="btn btn-sm btn-outline-light">Back to Orders</a>
+        </div>
       </div>
 
       <div class="row g-3">

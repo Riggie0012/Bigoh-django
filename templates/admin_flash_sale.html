@@ -203,6 +203,7 @@
       <section class="panel">
         <div class="text-muted small mb-2">Current countdown: {{ flash_sale_time_label }}</div>
         <form method="POST" action="/admin/flash-sale">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="flash-controls">
             <label class="flash-toggle">
               <input type="checkbox" name="is_active" {% if flash_sale_active %}checked{% endif %}>

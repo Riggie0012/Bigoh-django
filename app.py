@@ -88,6 +88,7 @@ WHATSAPP_ALERTS_ENABLED = os.getenv("WHATSAPP_ALERTS_ENABLED", "0") == "1"
 WHATSAPP_ALERT_WEBHOOK = os.getenv("WHATSAPP_ALERT_WEBHOOK", "").strip()
 WHATSAPP_ALERT_TOKEN = os.getenv("WHATSAPP_ALERT_TOKEN", "").strip()
 WHATSAPP_ALERT_TO = os.getenv("WHATSAPP_ALERT_TO", "").strip() or SUPPORT_WHATSAPP
+WHATSAPP_RECEIPTS_ENABLED = os.getenv("WHATSAPP_RECEIPTS_ENABLED", "0") == "1"
 REVIEW_AUTO_APPROVE = os.getenv("REVIEW_AUTO_APPROVE", "0") == "1"
 REVIEW_TRUSTED_USERS = {
     u.strip().lower()
@@ -1465,6 +1466,32 @@ def _send_whatsapp_alert(message: str) -> bool:
     payload = json.dumps(
         {
             "to": WHATSAPP_ALERT_TO,
+            "message": message,
+            "token": WHATSAPP_ALERT_TOKEN or None,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        WHATSAPP_ALERT_WEBHOOK,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8):
+            return True
+    except urllib.error.URLError:
+        return False
+
+
+def _send_whatsapp_message(to: str, message: str) -> bool:
+    if not WHATSAPP_RECEIPTS_ENABLED or not WHATSAPP_ALERT_WEBHOOK:
+        return False
+    to_clean = normalize_phone_number(to)
+    if not to_clean:
+        return False
+    payload = json.dumps(
+        {
+            "to": to_clean,
             "message": message,
             "token": WHATSAPP_ALERT_TOKEN or None,
         }
@@ -4151,6 +4178,98 @@ def order_confirmation(order_id):
     )
 
 
+@app.route("/order/receipt/<int:order_id>")
+def order_receipt(order_id):
+    if not session.get("username") and not session.get("is_admin"):
+        return redirect(url_for("signin"))
+
+    conn = get_db_connection()
+    has_ref = orders_has_reference()
+    has_discount = orders_has_discount()
+    try:
+        with conn.cursor() as cur:
+            cols = ["order_id", "user_id", "location", "payment_method", "status", "subtotal"]
+            if has_ref:
+                cols.append("order_reference")
+            if has_discount:
+                cols.extend(["discount", "discount_reason"])
+
+            cur.execute(
+                f"""
+                SELECT {", ".join(cols)}
+                FROM orders
+                WHERE order_id = %s
+                """,
+                (order_id,),
+            )
+            order = cur.fetchone()
+            if not order:
+                return redirect(url_for("home"))
+
+            user_id = _row_at(order, 1, None)
+            if not session.get("is_admin") and user_id != session.get("username"):
+                return redirect(url_for("home"))
+
+            status = _row_at(order, 4, "")
+            if status not in ("COMPLETED", "DELIVERED"):
+                set_site_message("Receipt is available after admin confirmation.", "warning")
+                return redirect(url_for("order_confirmation", order_id=order_id))
+
+            cur.execute(
+                """
+                SELECT product_id, product_name, unit_price, quantity, line_total
+                FROM order_items
+                WHERE order_id = %s
+                """,
+                (order_id,),
+            )
+            items = cur.fetchall() or []
+
+            cur.execute(
+                "SELECT username, email, phone FROM users WHERE id=%s",
+                (user_id,),
+            )
+            user = cur.fetchone() or ("Customer", "", "")
+    finally:
+        conn.close()
+
+    reference = f"ZC-{order_id:06d}"
+    if order and has_ref:
+        ref_idx = 6
+        if _row_at(order, ref_idx, ""):
+            reference = _row_at(order, ref_idx, reference)
+
+    discount = 0.0
+    discount_reason = ""
+    if order and has_discount:
+        discount_idx = 6 + (1 if has_ref else 0)
+        discount = float(_row_at(order, discount_idx, 0) or 0)
+        discount_reason = _row_at(order, discount_idx + 1, "")
+
+    items_total = sum(float(_row_at(it, 4, 0) or 0) for it in items)
+    order_total = float(_row_at(order, 5, 0) or 0)
+
+    return render_template(
+        "receipt.html",
+        order=order,
+        items=items,
+        reference=reference,
+        discount=discount,
+        discount_reason=discount_reason,
+        items_total=items_total,
+        order_total=order_total,
+        customer=user,
+        business_name=BUSINESS_NAME,
+        business_address=BUSINESS_ADDRESS,
+        business_reg_no=BUSINESS_REG_NO,
+        business_reg_body=BUSINESS_REG_BODY,
+        support_email=SUPPORT_EMAIL,
+        support_phone=SUPPORT_PHONE,
+        support_whatsapp=SUPPORT_WHATSAPP,
+        receipt_date=datetime.now(),
+    )
+
+
 
 # Admin dashboard route
 @app.route("/admin")
@@ -4167,6 +4286,7 @@ def admin_dashboard():
         "quantity": 0,
         "pending": 0,
         "completed": 0,
+        "delivered": 0,
         "cancelled": 0,
     }
     orders = []
@@ -4199,6 +4319,7 @@ def admin_dashboard():
         metrics["quantity"] = _scalar(cur, "SELECT COALESCE(SUM(quantity), 0) FROM order_items", default=0)
         metrics["pending"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("PENDING",), default=0)
         metrics["completed"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("COMPLETED",), default=0)
+        metrics["delivered"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("DELIVERED",), default=0)
         metrics["cancelled"] = _scalar(cur, "SELECT COUNT(*) FROM orders WHERE status = %s", ("CANCELLED",), default=0)
         repeat_customers = _scalar(
             cur,
@@ -4665,19 +4786,70 @@ def admin_sponsored_products():
 @admin_required
 def admin_update_order_status(order_id):
     status = request.form.get("status", "").strip().upper()
-    allowed = {"PENDING", "PROCESSING", "COMPLETED", "CANCELLED"}
+    allowed = {"PENDING", "PROCESSING", "COMPLETED", "DELIVERED", "CANCELLED"}
     if status not in allowed:
         return redirect(request.referrer or url_for("admin_dashboard"))
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+            cur.execute("SELECT status, user_id FROM orders WHERE order_id=%s", (order_id,))
+            row = cur.fetchone()
+            prev_status = _row_at(row, 0, "")
+            user_id = _row_at(row, 1, None)
             cur.execute("UPDATE orders SET status=%s WHERE order_id=%s", (status, order_id))
+            if status == "DELIVERED" and prev_status != "DELIVERED" and user_id:
+                cur.execute("SELECT phone FROM users WHERE id=%s", (user_id,))
+                phone_row = cur.fetchone()
+                user_phone = _row_at(phone_row, 0, "")
+                receipt_link = url_for("order_receipt", order_id=order_id, _external=True)
+                message = (
+                    f"Your order #{order_id} has been delivered. "
+                    f"Receipt: {receipt_link}\n"
+                    f"- {BUSINESS_NAME}"
+                )
+                _send_whatsapp_message(user_phone, message)
         conn.commit()
     finally:
         conn.close()
 
     return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/admin/orders/<int:order_id>/send-receipt", methods=["POST"])
+@admin_required
+def admin_send_receipt(order_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT status, user_id FROM orders WHERE order_id=%s", (order_id,))
+            row = cur.fetchone()
+            status = _row_at(row, 0, "")
+            user_id = _row_at(row, 1, None)
+            if status not in ("COMPLETED", "DELIVERED"):
+                set_site_message("Receipt can be sent only after completion.", "warning")
+                return redirect(request.referrer or url_for("admin_orders"))
+            if not user_id:
+                set_site_message("Customer not found for this order.", "warning")
+                return redirect(request.referrer or url_for("admin_orders"))
+            cur.execute("SELECT phone FROM users WHERE id=%s", (user_id,))
+            phone_row = cur.fetchone()
+            user_phone = _row_at(phone_row, 0, "")
+    finally:
+        conn.close()
+
+    receipt_link = url_for("order_receipt", order_id=order_id, _external=True)
+    message = (
+        f"Your order #{order_id} has been confirmed. "
+        f"Receipt: {receipt_link}\n"
+        f"- {BUSINESS_NAME}"
+    )
+    ok = _send_whatsapp_message(user_phone, message)
+    if ok:
+        set_site_message("Receipt sent to customer via WhatsApp.", "success")
+    else:
+        set_site_message("Receipt not sent. Check WhatsApp settings or phone number.", "warning")
+    return redirect(request.referrer or url_for("admin_orders"))
 
 
 @app.route("/admin/products")

@@ -71,6 +71,7 @@
                   <div class="col-md-2 mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
 
                     <form method="POST" action="/update_cart/{{ p[0] }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="action" value="dec">
                       <button class="btn btn-secondary qty-btn" type="submit">-</button>
                     </form>
@@ -78,6 +79,7 @@
                     <div class="qty-box cart-item">{{ row.qty }}</div>
 
                     <form method="POST" action="/update_cart/{{ p[0] }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="action" value="inc">
                       <button class="btn btn-warning text-white qty-btn" type="submit">+</button>
                     </form>
@@ -142,6 +144,7 @@
             {% endif %}
 
           <form method="POST" action="{{ url_for('pay_on_delivery') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="form-label mt-2">Delivery Location</label>
             <input type="text" name="location" class="form-control" placeholder="e.g., Nairobi CBD, OTC stage..." required>
 

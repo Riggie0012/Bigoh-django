@@ -170,6 +170,7 @@
                      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
                      <form action="/signin" method="post" autocomplete="on">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                          <input type="hidden" name="next" value="{{ next_url or '' }}">
                          <div class="mb-3">
                              <input type="text" name="username" placeholder="Email address or phone number" class="form-control" autocomplete="username" required>

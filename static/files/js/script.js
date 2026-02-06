@@ -65,6 +65,27 @@ function applyCsrfToForms() {
 
 document.addEventListener("DOMContentLoaded", applyCsrfToForms);
 
+function applyCsrfToFetch() {
+    const meta = document.querySelector("meta[name='csrf-token']");
+    const token = meta?.getAttribute("content");
+    if (!token || !window.fetch) return;
+
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+        const method = (init.method || "GET").toUpperCase();
+        if (method === "GET" || method === "HEAD") {
+            return originalFetch(input, init);
+        }
+        const headers = new Headers(init.headers || {});
+        if (!headers.has("X-CSRF-Token")) {
+            headers.set("X-CSRF-Token", token);
+        }
+        return originalFetch(input, { ...init, headers });
+    };
+}
+
+document.addEventListener("DOMContentLoaded", applyCsrfToFetch);
+
 function updateCartBadge(count) {
     const badge = document.getElementById("cartCountBadge");
     if (!badge) return;

@@ -11,12 +11,14 @@
                 <div class="alert alert-danger">{{ error }}</div>
                 {% endif %}
                 <form action="/verify-phone" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="text" name="otp" placeholder="Verification Code" class="form-control" required maxlength="6">
                     <div class="form-text">Code expires in 10 minutes.</div>
                     <br>
                     <input type="submit" value="Verify Phone" class="btn btn-info">
                 </form>
                 <form action="/verify/resend" method="post" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-outline-secondary">Resend Code & Email</button>
                 </form>
                 <br>

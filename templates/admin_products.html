@@ -205,6 +205,7 @@
                 <td class="d-flex gap-2 flex-wrap">
                   <a href="/admin/products/{{ p[0] }}/edit" class="btn btn-sm btn-outline-light">Edit</a>
                   <form method="POST" action="/admin/products/{{ p[0] }}/delete" onsubmit="return confirm('Delete this product?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                   </form>
                 </td>
