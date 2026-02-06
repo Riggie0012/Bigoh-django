@@ -7,7 +7,7 @@
   "deploy": {
     "runtime": "V2",
     "numReplicas": 1,
-    "startCommand": "gunicorn -c gunicorn.conf.py wsgi:app",
+    "startCommand": "DJANGO_SETTINGS_MODULE=bigoh_django.settings_prod gunicorn -c gunicorn.conf.py bigoh_django.wsgi:application",
     "sleepApplication": false,
     "useLegacyStacker": false,
     "multiRegionConfig": { 

@@ -1,3 +1,3 @@
-from app import app
+from bigoh_django.wsgi import application as app
 
-# Gunicorn entrypoint for production (Railway, etc.)
+# Compatibility shim for platforms still pointing at wsgi:app.

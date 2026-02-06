@@ -16,3 +16,7 @@ def db_health(request):
     except Exception as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
     return JsonResponse({"ok": ok})
+
+
+def health(request):
+    return JsonResponse({"ok": True})

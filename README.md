@@ -6,13 +6,32 @@ This repo includes a minimal Django scaffold for safe testing without touching t
 Quick test:
 1. Install dependencies: `pip install -r requirements.txt`
 2. Set DB env vars (same as Flask): `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (or `DATABASE_URL`)
+   - You can put these in a `.env` file in the project root.
 3. Run: `python manage.py runserver`
 4. Visit: `http://127.0.0.1:8000/` (home)
 5. DB check: `http://127.0.0.1:8000/health/db`
 
+Production settings module:
+- `DJANGO_SETTINGS_MODULE=bigoh_django.settings_prod`
+
+Production flags (Django):
+- `DJANGO_DEBUG=0`
+- `DJANGO_SECRET_KEY=...` (set a long random key)
+- `DJANGO_ALLOWED_HOSTS=example.com,www.example.com`
+- `DJANGO_REQUIRE_SECRET_KEY=1` (fail fast if key missing)
+- `DJANGO_SECURE_SSL_REDIRECT=1`
+- `DJANGO_SECURE_PROXY_SSL_HEADER=1` (if behind a proxy)
+- `DJANGO_SESSION_COOKIE_SECURE=1`
+- `DJANGO_CSRF_COOKIE_SECURE=1`
+- `DJANGO_SECURE_HSTS_SECONDS=31536000`
+- `DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=1`
+- `DJANGO_SECURE_HSTS_PRELOAD=1`
+- `DJANGO_STATIC_ROOT=/app/staticfiles`
+- `DJANGO_USE_PYMYSQL=1` (only if you cannot install mysqlclient)
+
 ---
 
-﻿# Bigoh 
+# Bigoh 
 
 Bigoh is a ready-made online store you can run on your computer or deploy online.
 This guide is written for beginners. Follow the steps in order and you will have a working store.

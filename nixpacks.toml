@@ -9,4 +9,4 @@ cmds = ["python -m venv /opt/venv", "/opt/venv/bin/pip install -r requirements.t
 cmds = ["python -c \"import sys; print('Build ok', sys.version)\""]
 
 [start]
-cmd = "gunicorn -c gunicorn.conf.py wsgi:app"
+cmd = "DJANGO_SETTINGS_MODULE=bigoh_django.settings_prod gunicorn -c gunicorn.conf.py bigoh_django.wsgi:application"

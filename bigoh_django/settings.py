@@ -1,14 +1,18 @@
 import os
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env if present
+load_dotenv(BASE_DIR / ".env")
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv("FLASK_SECRET_KEY") or "unsafe-dev-key"
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 
 raw_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "*")
-ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -98,5 +102,22 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = os.getenv("DJANGO_STATIC_ROOT", str(BASE_DIR / "staticfiles"))
+
+# Production security flags (opt-in via env)
+SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "0") == "1"
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https")
+    if os.getenv("DJANGO_SECURE_PROXY_SSL_HEADER", "0") == "1"
+    else None
+)
+SESSION_COOKIE_SECURE = os.getenv("DJANGO_SESSION_COOKIE_SECURE", "0") == "1"
+CSRF_COOKIE_SECURE = os.getenv("DJANGO_CSRF_COOKIE_SECURE", "0") == "1"
+SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+SECURE_HSTS_PRELOAD = os.getenv("DJANGO_SECURE_HSTS_PRELOAD", "0") == "1"
+
+if os.getenv("DJANGO_REQUIRE_SECRET_KEY", "0") == "1" and SECRET_KEY == "unsafe-dev-key":
+    raise RuntimeError("DJANGO_SECRET_KEY is required in production.")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
