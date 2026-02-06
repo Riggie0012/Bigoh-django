@@ -2072,8 +2072,15 @@ def signup():
                 user_id = cursor.lastrowid
                 now = _now_utc()
                 email_token = generate_email_token()
-                phone_otp = generate_phone_otp()
                 with connection.cursor() as ver_cur:
+                    ver_cur.execute(
+                        """
+                        UPDATE users
+                        SET phone_verified = 1, phone_verified_at = %s
+                        WHERE id = %s
+                        """,
+                        (now, user_id),
+                    )
                     ensure_user_verification_row(ver_cur, user_id)
                     update_user_verification(
                         ver_cur,
@@ -2082,9 +2089,9 @@ def signup():
                             "email_token": email_token,
                             "email_token_expires": now + EMAIL_TOKEN_TTL,
                             "email_sent_at": now,
-                            "phone_otp": phone_otp,
-                            "phone_otp_expires": now + PHONE_OTP_TTL,
-                            "phone_sent_at": now,
+                            "phone_otp": None,
+                            "phone_otp_expires": None,
+                            "phone_sent_at": None,
                             "phone_otp_attempts": 0,
                         },
                     )
@@ -2095,24 +2102,16 @@ def signup():
 
             send_signup_confirmation(username, email)
             try:
-                if validate_phone_number(phone):
-                    send_phone_otp_sms(phone, phone_otp)
-            except Exception:
-                pass
-            try:
                 if validate_email_format(email):
                     send_email_verification(username, email, email_token)
             except Exception:
                 pass
 
-            session["verify_user_id"] = user_id
-            session["verify_email"] = email
-            session["verify_phone"] = phone
             set_site_message(
-                "We sent a verification link to your email and a code to your phone.",
+                "We sent a verification link to your email.",
                 "info",
             )
-            return redirect(url_for("verify_phone"))
+            return redirect(url_for("signin"))
         except Exception:
             app.logger.exception("Signup error")
             return render_template('signup.html', error='Signup failed. Please try again.')
