@@ -1,3 +1,17 @@
+# Bigoh 
+
+## Django Scaffold (Side-by-Side Test)
+This repo includes a minimal Django scaffold for safe testing without touching the Flask app.
+
+Quick test:
+1. Install dependencies: `pip install -r requirements.txt`
+2. Set DB env vars (same as Flask): `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (or `DATABASE_URL`)
+3. Run: `python manage.py runserver`
+4. Visit: `http://127.0.0.1:8000/` (home)
+5. DB check: `http://127.0.0.1:8000/health/db`
+
+---
+
 ﻿# Bigoh 
 
 Bigoh is a ready-made online store you can run on your computer or deploy online.
