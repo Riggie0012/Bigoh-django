@@ -2049,18 +2049,19 @@ def signup():
 
             hashed_password = generate_password_hash(password1)
 
+            now = _now_utc()
             if users_has_is_admin():
                 sql = ''' 
-                     insert into users(username, password, email, phone, is_admin) 
-                     values(%s, %s, %s, %s, %s)
+                     insert into users(username, password, email, phone, is_admin, email_verified, email_verified_at) 
+                     values(%s, %s, %s, %s, %s, %s, %s)
                  '''
-                cursor.execute(sql, (username, hashed_password, email, phone, 0))
+                cursor.execute(sql, (username, hashed_password, email, phone, 0, 1, now))
             else:
                 sql = ''' 
-                     insert into users(username, password, email, phone) 
-                     values(%s, %s, %s, %s)
+                     insert into users(username, password, email, phone, email_verified, email_verified_at) 
+                     values(%s, %s, %s, %s, %s, %s)
                  '''
-                cursor.execute(sql, (username, hashed_password, email, phone))
+                cursor.execute(sql, (username, hashed_password, email, phone, 1, now))
 
             try:
                 connection.commit()
@@ -2070,8 +2071,6 @@ def signup():
 
             try:
                 user_id = cursor.lastrowid
-                now = _now_utc()
-                email_token = generate_email_token()
                 with connection.cursor() as ver_cur:
                     ver_cur.execute(
                         """
@@ -2086,9 +2085,9 @@ def signup():
                         ver_cur,
                         user_id,
                         {
-                            "email_token": email_token,
-                            "email_token_expires": now + EMAIL_TOKEN_TTL,
-                            "email_sent_at": now,
+                            "email_token": None,
+                            "email_token_expires": None,
+                            "email_sent_at": None,
                             "phone_otp": None,
                             "phone_otp_expires": None,
                             "phone_sent_at": None,
@@ -2101,14 +2100,8 @@ def signup():
                 return render_template('signup.html', error='Signup failed. Please try again.')
 
             send_signup_confirmation(username, email)
-            try:
-                if validate_email_format(email):
-                    send_email_verification(username, email, email_token)
-            except Exception:
-                pass
-
             set_site_message(
-                "We sent a verification link to your email.",
+                "Signup successful. You can now sign in.",
                 "info",
             )
             return redirect(url_for("signin"))
