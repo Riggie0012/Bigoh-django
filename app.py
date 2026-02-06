@@ -2529,28 +2529,10 @@ def auth_google_callback():
     if created_new:
         send_signup_confirmation(username, email)
 
-    # Always skip phone verification for Google accounts.
-    try:
-        connection = get_db_connection()
-        ensure_user_verification_schema(connection)
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE users
-                SET phone_verified = 1,
-                    phone_verified_at = COALESCE(phone_verified_at, %s)
-                WHERE id = %s
-                """,
-                (_now_utc(), user_id),
-            )
-        connection.commit()
-    except Exception:
-        pass
-    finally:
-        try:
-            connection.close()
-        except Exception:
-            pass
+    if not phone:
+        session["pending_user_id"] = user_id
+        set_site_message("Please add your phone number to continue.", "warning")
+        return redirect(url_for("add_phone"))
 
     if not email_verified:
         token = None
