@@ -2384,36 +2384,83 @@ def add_phone():
         try:
             ensure_user_verification_schema(connection)
             with connection.cursor() as cur:
-                cur.execute("UPDATE users SET phone=%s WHERE id=%s", (phone, user_id))
                 now = _now_utc()
-                phone_otp = generate_phone_otp()
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET phone=%s, phone_verified=1, phone_verified_at=%s
+                    WHERE id=%s
+                    """,
+                    (phone, now, user_id),
+                )
                 ensure_user_verification_row(cur, user_id)
                 update_user_verification(
                     cur,
                     user_id,
                     {
-                        "phone_otp": phone_otp,
-                        "phone_otp_expires": now + PHONE_OTP_TTL,
-                        "phone_sent_at": now,
+                        "phone_otp": None,
+                        "phone_otp_expires": None,
+                        "phone_sent_at": None,
                         "phone_otp_attempts": 0,
                     },
                 )
+                cur.execute(
+                    "SELECT username, email, email_verified FROM users WHERE id=%s",
+                    (user_id,),
+                )
+                user_row = cur.fetchone()
             connection.commit()
         except Exception:
             return render_template('add_phone.html', error="Unable to save phone number. Please try again.")
         finally:
             connection.close()
 
-        try:
-            send_phone_otp_sms(phone, phone_otp)
-        except Exception:
-            pass
+        username = _row_at(user_row, 0, "Customer") if user_row else "Customer"
+        email = _row_at(user_row, 1, "") if user_row else ""
+        email_verified = bool(_row_at(user_row, 2, 0)) if user_row else False
 
-        session["verify_user_id"] = user_id
-        session["verify_phone"] = phone
+        if email and not email_verified:
+            token = None
+            try:
+                connection = get_db_connection()
+                ensure_user_verification_schema(connection)
+                with connection.cursor() as cur:
+                    token = generate_email_token()
+                    ensure_user_verification_row(cur, user_id)
+                    update_user_verification(
+                        cur,
+                        user_id,
+                        {
+                            "email_token": token,
+                            "email_token_expires": now + EMAIL_TOKEN_TTL,
+                            "email_sent_at": now,
+                        },
+                    )
+                connection.commit()
+            except Exception:
+                pass
+            finally:
+                if connection:
+                    connection.close()
+            try:
+                send_email_verification(username, email, token)
+            except Exception:
+                pass
+            set_site_message("Phone saved. Please verify your email to continue.", "warning")
+            session.pop("pending_user_id", None)
+            return redirect(url_for("signin"))
+
+        remember_me = session.pop("google_remember_me", False)
+        next_url = _pop_next_url()
+        session.clear()
+        session.permanent = remember_me
+        session["key"] = username
+        session["username"] = user_id
+        session["remember_me"] = remember_me
+        session["is_admin"] = is_admin_identity(user_id, email)
         session.pop("pending_user_id", None)
-        set_site_message("We sent a verification code to your phone.", "info")
-        return redirect(url_for("verify_phone"))
+        set_site_message("Phone saved successfully.", "success")
+        return redirect(next_url or url_for("home"))
 
     return render_template('add_phone.html')
 
